@@ -9,6 +9,11 @@
 */
 
 /* defines */
+//type defines
+#define bool unsigned short
+#define true ~0
+#define false 0
+
 //shark status
 enum shark_stat{
 	SHARK_READY = 0,	//shark thread is ready
@@ -17,19 +22,19 @@ enum shark_stat{
 };
 
 /* structures */
+struct cpu_info{
+};
+
 //shark's personal inventory
 struct shark_inven{
 
 };
 
 /* function declares */
-static int parse_args(int argc, char** argv);	//parsing input argument
-static int get_cpustat();			//
-
-static void loose_sharks();			//dealing all sharks(all tracing thread)
-static int loose_shark();			//create shark (tracing thread)
-static void shark_signal();			//for thread synchronizing
-static void wait_allsharks_ready();		//will be called from outer thread
-static void wait_gunfire();			//shark(tracing thread) will be waiting a start sign
+extern void loose_sharks();			//dealing all sharks(all tracing thread)
+extern bool loose_shark();			//create shark (tracing thread)
+extern void shark_signal();			//for thread synchronizing
+extern void wait_allsharks_ready();		//will be called from outer thread
+extern void wait_gunfire();			//shark(tracing thread) will be waiting a start sign
 
 #endif 
