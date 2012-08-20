@@ -11,8 +11,9 @@
 
 #include <pthread.h>	// pthread_t
 #include <stdint.h>		// uint16_t
-#include "linux/list.h"
-
+#include <stdbool.h>	// bool
+//#include <linux/list.h>
+#include "list.h"
 
 /* ioctl() request defines */
 #define BLKTRACESETUP	_IOWR(0x12,115,struct blk_user_trace_setup)
@@ -24,6 +25,8 @@
 struct thread_shark{
 	struct list_head list;
 	pthread_t td;
+	bool isOpenDebugfs;
+	int idxCPU;
 };
 
 /*

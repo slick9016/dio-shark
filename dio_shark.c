@@ -7,15 +7,17 @@
 	it will loosing sharks to each cpu
 */
 
+#include <errno.h>		// errno, strerror()
 #include <stdlib.h>		// malloc(), SIGINT, SIGHUP, SIGTERM, SIGPIPE, SIG_IGN
+#include <signal.h>		// SIGINT, SIGHUP, SIGTERM, SIGPIPE, SIG_IGN
 #include <stdio.h>		// stderr, fprintf(), printf()
 #include <unistd.h>		// read()
 #include <getopt.h>		// required_argument, arg_opts
 #include <string.h>		// memset()
-#include <fcntl.h>		// O_RDONLY, O_WRONLY
-#include <sys/ioctl.h>	// ioctl()
-#include <stdbool.h>	// bool, true, false
-#include <pthread.h>	// pthread_mutex_t, pthread_cond_t, pthread_create(), \
+#include <fcntl.h>		// O_RDONLY, O_WRONLY, O_CREAT
+#include <sys/ioctl.h>		// ioctl()
+#include <stdbool.h>		// bool, true, false
+#include <pthread.h>		// pthread_mutex_t, pthread_cond_t, pthread_create(), \
 							pthread_cond_wait(), pthread_mutex_lock(), \
 							pthread_mutex_unlock(), pthread_cond_signal(),\
 							PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER
@@ -48,7 +50,7 @@ void signalHandler(int idxSignal);
 void set_signalHandler(void);
 void put_signalHandler(void);
 
-bool wait_open_debugfs(void);
+bool wait_open_debugfs(struct list_head* shark_boss);
 void* shark_body(void* param);
 
 bool loose_sharks(struct list_head* shark_boss, int numCPU);
@@ -67,87 +69,114 @@ void setup_buts(struct blk_user_trace_setup *pbuts);
 */
 int main(int argc, char** argv){
 	int numCPU;
-	int fdDevice;
+	int fdDevice = 0;
 	struct blk_user_trace_setup buts;
-	struct list_head *shark_boss;
+	struct list_head *shark_boss = NULL;
 	struct list_head *p;
 	int buts_stat;
 	int ret;
 
+	printf("sysconf() entry \n");
 	// get the number of cpus
 	numCPU = sysconf(_SC_NPROCESSORS_ONLN);
-
+	printf("set_signalHandler() entry \n");
 	// set signal handler function
 	set_signalHandler();
 
 	// handle args
-	if( !parse_args(argc, argv) ){
+	/*
+	if( !parse_args(argc, argv) )
+	{
+		printf("asdf");
 		fprintf(stderr, "dio-shark argument error.\n");
 		goto out;
 	}
-
+	*/
+	printf("openfile_device() entry \n");
 	// open device file	
 	fdDevice = openfile_device("/dev/sda");
 	if(fdDevice < 0)
-	{	
+	{
+		fprintf(stderr, "openfile_device() failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
-
+	printf("setup_buts() entry \n");
 	// setup blk_user_trace_setup
 	setup_buts(&buts);
-
+	printf("ioctl-BLKTRACESETUP entry \n");
 	// device controller setup
 	ret = ioctl(fdDevice, BLKTRACESETUP, &buts);
-	if(ret < 0)
+	if(ret < 0)	
 	{
+		fprintf(stderr, "ioctl-BLKTRACESETUP failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
 	buts_stat = BUTS_STAT_SETUPED;
-
+	printf("create_list_head() entry \n");
 	// create list head for creating threads
 	shark_boss = create_list_head();
-
+	printf("loose_sharks() entry \n");
 	// create threads
 	ret = loose_sharks(shark_boss, numCPU);
 	if(ret == (int)false)
 	{
+		fprintf(stderr, "loose_sharks() failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
-
+	printf("wait_open_debugfs() entry \n");
 	// wait until open debug file
-	ret = wait_open_debugfs();
+	ret = wait_open_debugfs(shark_boss);
 	if(ret == (int)false)
 	{
+		fprintf(stderr, "wait_open_debugfs() failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
-
-	// wait until all thread terminate
-	wait_comeback_shark(shark_boss);
-
-	// fasten sharks that loosed
-	fasten_sharks(shark_boss);
-	
-	// destroy list head
-	free(shark_boss);	
-
+	printf("ioctl-BLKTRACESTART entry \n");
 	// device controller start
 	ret = ioctl(fdDevice, BLKTRACESTART);
 	if(ret < 0)
 	{
+		fprintf(stdout, "ioctl-BLKTRACESTART failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
 	buts_stat = BUTS_STAT_STARTED;
+	printf("wait_comeback_shark() entry \n");
+	// wait until all thread terminate
+	wait_comeback_shark(shark_boss);
 
+out:
+	// device controller stop
+	if(buts_stat != BUTS_STAT_NONE)
+	{
+		ret = ioctl(fdDevice, BLKTRACESTOP);
+		if(ret < 0)
+		{
+			fprintf(stdout, "ioctl-BLKTRACESTOP failed: %d/%s\n", errno, strerror(errno));
+		}
+	}
+
+	// fasten sharks that loosed
+	if(!list_empty(shark_boss))
+	{
+		fasten_sharks(shark_boss);
+	}
+	
+	// destroy list head
+	if(shark_boss != NULL)
+	{
+		free(shark_boss);
+	}
+	
 	// close device file
-	close(fdDevice);
+	if(fdDevice != 0)
+	{
+		close(fdDevice);
+	}
 
 	// put signal handler
 	put_signalHandler();
 
 	return 0;
-
-out:
-	return -1;
 }
 
 struct list_head* create_list_head(void)
@@ -241,13 +270,23 @@ bool loose_sharks(struct list_head* shark_boss, int numCPU){
 	struct thread_shark *tmpShark;
 	int i;
 
+	printf("\tnumCPU = %d \n", numCPU);
+
+	printf("\tprev = %d \n", shark_boss->prev);
+	printf("\tshark_boss = %d \n", shark_boss);
+	printf("\tnext = %d \n", shark_boss->next);
 	// install threads
 	for(i=0 ; i<numCPU ; i++)
 	{
+		printf("\tloose_shark(%d) entry \n", i);
 		tmpShark = loose_shark(i);
+		tmpShark->idxCPU = i;
+		
 		if(tmpShark == NULL)
 			return false;
-		list_add_tail(shark_boss, &(tmpShark->list));
+		printf("\tlist_add_tail() entry \n");
+		list_add_tail(&(tmpShark->list), shark_boss);
+		printf("\tlist_add_tail() terminate \n");
 	}
 
 	return true;
@@ -261,14 +300,14 @@ struct thread_shark* loose_shark(int idxCPU)
 	ret = pthread_create(&(shark->td), NULL, shark_body, shark);
 	if(ret)
 	{
-		fprintf(stderr, "dio-shark can not create thread.\n");
+		fprintf(stderr, "pthread_create(idxCPU:%d) failed:%d/%s\n", idxCPU, errno, strerror(errno));
 		
-		goto ERROR;
+		goto out;
 	}
 
 	return shark;
 
-ERROR:
+out:
 	// release tshark memory
 	if(shark != NULL)
 		free(shark);
@@ -283,7 +322,8 @@ void* wait_comeback_shark(struct list_head* shark_boss)
 	__list_for_each(p, shark_boss)
 	{
 		struct thread_shark *tmpShark;
-		tmpShark = list_entry(p, struct thread_shark, td);
+		tmpShark = list_entry(p, struct thread_shark, list);
+		printf("tmpShark = %d \n", tmpShark);
 		pthread_join(tmpShark->td, tReturn);
 	}
 }
@@ -291,77 +331,89 @@ void fasten_sharks(struct list_head* shark_boss)
 {
 	struct list_head* p;
 	
-	list_for_each_prev(p, shark_boss)
+	//list_for_each_prev(p, shark_boss)
 	{
 		struct thread_shark *tmpShark;
-		tmpShark = list_entry(p, struct thread_shark, td);
+		tmpShark = list_entry(p, struct thread_shark, list);
 		list_del(p);
 		free(tmpShark);
 	}
 }
-bool wait_open_debugfs(void)
+bool wait_open_debugfs(struct list_head* shark_boss)
 {
+	struct list_head* p;
 	int ret;
 
 	// thread mutex lock
 	ret = pthread_mutex_lock(&g_mutex);
 	if(ret != 0)
 	{
+		fprintf(stderr, "pthread_mutex_lock() fail:%d/%s\n", errno, strerror(errno));
 		return false;
 	}
 
-	while(!g_isdone)	//wait until program done
-		pthread_cond_wait(&g_cond, &g_mutex);	// wait until open
+	//while(!g_isdone)	//wait until program done
+	__list_for_each(p, shark_boss)
+	{
+		struct thread_shark *tmpShark;
+
+		tmpShark = list_entry(p, struct thread_shark, list);
+		if(tmpShark->isOpenDebugfs == false)
+		{
+			pthread_cond_wait(&g_cond, &g_mutex);	// wait until open
+		}
+	}
 
 	// thread mutex unlock
 	pthread_mutex_unlock(&g_mutex);
+
+	return true;
 }
 void* shark_body(void* param){
-	int buts_stat = BUTS_STAT_NONE;
-	/*
-	   	BUTS_STAT_NONE 	  : 0
-		BUTS_STAT_SETUPED : 1
-		BUTS_STAT_STARTED : 2
-		BUTS_STAT_STOPPED : 3
-	*/
 	struct blk_user_trace_setup buts;
+	struct thread_shark *shark = param;
 	int fdDebugfs, fdOutput;
 	char buf[BUF_SIZE];
 	int lenred;
 
+	printf("shark_body() entry \n");
+
 	// open debug file
 	fdDebugfs = openfile_debugfs();
 	if(fdDebugfs < 0)
+	{
+		fprintf(stderr, "openfile_debugfs() failed:%d/%s\n", errno, strerror(errno));
 		goto out;
+	}
+	shark->isOpenDebugfs = true;
 
 	// wake thread that wait opening debug file
+	pthread_mutex_lock(&g_mutex);
 	pthread_cond_signal(&g_cond);
+	pthread_mutex_unlock(&g_mutex);
 
 	// open output file
 	fdOutput = openfile_output();
 	if(fdOutput < 0)
+	{
+		fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
 		goto out;
+	}
 
 	// get i/o data
 	while(!g_isdone)
 	{
 		lenred = read(fdDebugfs, buf, sizeof(buf));
 		if(lenred < 0)
+		{
+			fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
 			goto out;
+		}
 
 		write(fdOutput, buf, lenred);
 	}
 
 out:
-	/* Move to main function
-	// stop ioctl
-	if(!(pfd.fd < 0) && buts_stat != BUTS_STAT_NONE)
-	{
-		ioctl(pfd.fd, DIOSHARKSTOP);
-		buts_stat = BUTS_STAT_STOPPED;
-	}
-	*/
-
 	// close output file
 	if(!(fdOutput < 0))
 		close(fdOutput);
@@ -370,12 +422,6 @@ out:
 	if(!(fdDebugfs < 0))
 		close(fdDebugfs);
 	
-	/* Move to main function
-	// close poll file
-	if(!(pfd.fd < 0))
-		close(pfd.fd);
-	*/
-
 	return NULL;
 }
 
@@ -383,6 +429,7 @@ int openfile_device(char *devpath){
 	int fdDevice;
 
 	fdDevice = open(devpath, O_RDONLY);
+	printf("%d \n", fdDevice);
 	if (fdDevice < 0)
 		return -1;
 
@@ -392,7 +439,7 @@ int openfile_debugfs(void)
 {
 	int fdDebugfs;
 
-	fdDebugfs = open("/sys/kernel/debug/block/sda.trace.o", O_RDONLY);
+	fdDebugfs = open("/sys/kernel/debug/block/sda/dropped", O_RDONLY);
 	if (fdDebugfs < 0)
 		return -1;
 
@@ -401,7 +448,7 @@ int openfile_debugfs(void)
 int openfile_output(void)
 {	int fdOutput;
 
-	fdOutput = open("./output.sda", O_WRONLY);
+	fdOutput = open("./dioshark.output", O_WRONLY | O_CREAT);
 	if (fdOutput <0)
 		return -1;
 

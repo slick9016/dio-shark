@@ -1,0 +1,137 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ARG_OPTS	dio_shark.c	193;"	d	file:
+BLKTRACEDOWN	dio_shark.h	21;"	d
+BLKTRACESETUP	dio_shark.h	18;"	d
+BLKTRACESTART	dio_shark.h	19;"	d
+BLKTRACESTOP	dio_shark.h	20;"	d
+BUF_NR	dio_shark.c	29;"	d	file:
+BUF_SIZE	dio_shark.c	28;"	d	file:
+BUTS_STAT_NONE	dio_shark.c	32;"	d	file:
+BUTS_STAT_SETUPED	dio_shark.c	33;"	d	file:
+BUTS_STAT_STARTED	dio_shark.c	34;"	d	file:
+BUTS_STAT_STOPPED	dio_shark.c	35;"	d	file:
+DIO_SHARK_H	dio_shark.h	10;"	d
+HLIST_HEAD	linux/list.h	380;"	d
+HLIST_HEAD_INIT	linux/list.h	379;"	d
+INIT_HLIST_HEAD	linux/list.h	381;"	d
+INIT_HLIST_NODE	linux/list.h	382;"	d
+INIT_LIST_HEAD	linux/list.h	67;"	d
+INIT_LIST_HEAD	list.h	/^static inline void INIT_LIST_HEAD(struct list_head *list)$/;"	f
+LIST_HEAD	linux/list.h	64;"	d
+LIST_HEAD	list.h	40;"	d
+LIST_HEAD_INIT	linux/list.h	62;"	d
+LIST_HEAD_INIT	list.h	38;"	d
+LIST_POISON1	linux/list.h	46;"	d
+LIST_POISON1	list.h	31;"	d
+LIST_POISON2	linux/list.h	47;"	d
+LIST_POISON2	list.h	32;"	d
+OBJS	Makefile	/^OBJS=dio_shark.o$/;"	m
+_LINUX_LIST_H	linux/list.h	16;"	d
+_LINUX_LIST_H	list.h	2;"	d
+__hlist_del	linux/list.h	/^static inline void __hlist_del(struct hlist_node *n)$/;"	f
+__list_add	linux/list.h	/^static inline void __list_add(struct list_head *new,$/;"	f
+__list_add	list.h	/^static inline void __list_add(struct list_head *new,$/;"	f
+__list_del	linux/list.h	/^static inline void __list_del(struct list_head * prev, struct list_head * next)$/;"	f
+__list_del	list.h	/^static inline void __list_del(struct list_head * prev, struct list_head * next)$/;"	f
+__list_for_each	linux/list.h	254;"	d
+__list_for_each	list.h	127;"	d
+__list_splice	linux/list.h	/^static inline void __list_splice(struct list_head *list,$/;"	f
+__list_splice	list.h	/^static inline void __list_splice(struct list_head *list,$/;"	f
+act_mask	dio_shark.h	/^	uint16_t act_mask;		\/* input *\/$/;"	m	struct:blk_user_trace_setup
+arg_opts	dio_shark.c	/^static struct option arg_opts[] = {$/;"	v	typeref:struct:option	file:
+blk_user_trace_setup	dio_shark.h	/^struct blk_user_trace_setup {$/;"	s
+buf_nr	dio_shark.h	/^	uint32_t buf_nr;		\/* input *\/$/;"	m	struct:blk_user_trace_setup
+buf_size	dio_shark.h	/^	uint32_t buf_size;		\/* input *\/$/;"	m	struct:blk_user_trace_setup
+container_of	linux/list.h	35;"	d
+container_of	list.h	21;"	d
+create_list_head	dio_shark.c	/^struct list_head* create_list_head(void)$/;"	f
+end_lba	dio_shark.h	/^	uint64_t end_lba;$/;"	m	struct:blk_user_trace_setup
+fasten_sharks	dio_shark.c	/^void fasten_sharks(struct list_head* shark_boss)$/;"	f
+first	linux/list.h	/^	struct hlist_node *first;$/;"	m	struct:hlist_head	typeref:struct:hlist_head::hlist_node
+g_cond	dio_shark.c	/^pthread_cond_t g_cond	= PTHREAD_COND_INITIALIZER;$/;"	v
+g_isdone	dio_shark.c	/^bool g_isdone = false;$/;"	v
+g_mutex	dio_shark.c	/^pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;$/;"	v
+hlist_add_after	linux/list.h	/^static inline void hlist_add_after(struct hlist_node *n,$/;"	f
+hlist_add_before	linux/list.h	/^static inline void hlist_add_before(struct hlist_node *n,$/;"	f
+hlist_add_head	linux/list.h	/^static inline void hlist_add_head(struct hlist_node *n, struct hlist_head *h)$/;"	f
+hlist_del	linux/list.h	/^static inline void hlist_del(struct hlist_node *n)$/;"	f
+hlist_del_init	linux/list.h	/^static inline void hlist_del_init(struct hlist_node *n)$/;"	f
+hlist_empty	linux/list.h	/^static inline int hlist_empty(const struct hlist_head *h)$/;"	f
+hlist_entry	linux/list.h	454;"	d
+hlist_for_each	linux/list.h	456;"	d
+hlist_for_each_entry	linux/list.h	471;"	d
+hlist_for_each_entry_continue	linux/list.h	483;"	d
+hlist_for_each_entry_from	linux/list.h	495;"	d
+hlist_for_each_entry_safe	linux/list.h	508;"	d
+hlist_for_each_safe	linux/list.h	460;"	d
+hlist_head	linux/list.h	/^struct hlist_head {$/;"	s
+hlist_node	linux/list.h	/^struct hlist_node {$/;"	s
+hlist_unhashed	linux/list.h	/^static inline int hlist_unhashed(const struct hlist_node *h)$/;"	f
+list	dio_shark.h	/^	struct list_head list;$/;"	m	struct:thread_shark	typeref:struct:thread_shark::list_head
+list_add	linux/list.h	/^static inline void list_add(struct list_head *new, struct list_head *head)$/;"	f
+list_add	list.h	/^static inline void list_add(struct list_head *new, struct list_head *head)$/;"	f
+list_add_tail	linux/list.h	/^static inline void list_add_tail(struct list_head *new, struct list_head *head)$/;"	f
+list_add_tail	list.h	/^static inline void list_add_tail(struct list_head *new, struct list_head *head)$/;"	f
+list_del	linux/list.h	/^static inline void list_del(struct list_head *entry)$/;"	f
+list_del	list.h	/^static inline void list_del(struct list_head *entry)$/;"	f
+list_del_init	linux/list.h	/^static inline void list_del_init(struct list_head *entry)$/;"	f
+list_empty	linux/list.h	/^static inline int list_empty(const struct list_head *head)$/;"	f
+list_empty	list.h	/^static inline int list_empty(const struct list_head *head)$/;"	f
+list_entry	linux/list.h	231;"	d
+list_entry	list.h	146;"	d
+list_first	list.h	/^static inline struct list_head *list_first(const struct list_head *head)$/;"	f
+list_for_each	linux/list.h	240;"	d
+list_for_each_entry	linux/list.h	282;"	d
+list_for_each_entry_continue	linux/list.h	315;"	d
+list_for_each_entry_reverse	linux/list.h	293;"	d
+list_for_each_entry_safe	linux/list.h	327;"	d
+list_for_each_entry_safe_continue	linux/list.h	341;"	d
+list_for_each_entry_safe_reverse	linux/list.h	355;"	d
+list_for_each_prev	linux/list.h	262;"	d
+list_for_each_safe	linux/list.h	272;"	d
+list_for_each_safe	list.h	136;"	d
+list_head	linux/list.h	/^struct list_head {$/;"	s
+list_head	list.h	/^struct list_head {$/;"	s
+list_len	list.h	/^static inline int list_len(struct list_head *head_p)$/;"	f
+list_move	linux/list.h	/^static inline void list_move(struct list_head *list, struct list_head *head)$/;"	f
+list_move_tail	linux/list.h	/^static inline void list_move_tail(struct list_head *list,$/;"	f
+list_move_tail	list.h	/^static inline void list_move_tail(struct list_head *list,$/;"	f
+list_prepare_entry	linux/list.h	305;"	d
+list_replace	list.h	/^static inline void list_replace(struct list_head *old,$/;"	f
+list_replace_init	list.h	/^static inline void list_replace_init(struct list_head *old,$/;"	f
+list_splice	linux/list.h	/^static inline void list_splice(struct list_head *list, struct list_head *head)$/;"	f
+list_splice	list.h	/^static inline void list_splice(struct list_head *list, struct list_head *head)$/;"	f
+list_splice_init	linux/list.h	/^static inline void list_splice_init(struct list_head *list,$/;"	f
+loose_shark	dio_shark.c	/^struct thread_shark* loose_shark(int idxCPU)$/;"	f
+loose_sharks	dio_shark.c	/^bool loose_sharks(struct list_head* shark_boss, int numCPU){$/;"	f
+main	dio_shark.c	/^int main(int argc, char** argv){$/;"	f
+name	dio_shark.h	/^	char name[32];			\/* output *\/$/;"	m	struct:blk_user_trace_setup
+next	linux/list.h	/^	struct hlist_node *next, **pprev;$/;"	m	struct:hlist_node	typeref:struct:hlist_node::hlist_node
+next	linux/list.h	/^	struct list_head *next, *prev;$/;"	m	struct:list_head	typeref:struct:list_head::list_head
+next	list.h	/^	struct list_head *next, *prev;$/;"	m	struct:list_head	typeref:struct:list_head::list_head
+offsetof	linux/list.h	26;"	d
+offsetof	list.h	10;"	d
+openfile_debugfs	dio_shark.c	/^int openfile_debugfs(void)$/;"	f
+openfile_device	dio_shark.c	/^int openfile_device(char *devpath){$/;"	f
+openfile_output	dio_shark.c	/^int openfile_output(void)$/;"	f
+parse_args	dio_shark.c	/^bool parse_args(int argc, char** argv){$/;"	f
+pid	dio_shark.h	/^	uint32_t pid;$/;"	m	struct:blk_user_trace_setup
+pprev	linux/list.h	/^	struct hlist_node *next, **pprev;$/;"	m	struct:hlist_node	typeref:struct:hlist_node::
+prev	linux/list.h	/^	struct list_head *next, *prev;$/;"	m	struct:list_head	typeref:struct:list_head::
+prev	list.h	/^	struct list_head *next, *prev;$/;"	m	struct:list_head	typeref:struct:list_head::
+put_signalHandler	dio_shark.c	/^void put_signalHandler(void)$/;"	f
+set_signalHandler	dio_shark.c	/^void set_signalHandler(void)$/;"	f
+setup_buts	dio_shark.c	/^void setup_buts(struct blk_user_trace_setup *pbuts)$/;"	f
+shark_body	dio_shark.c	/^void* shark_body(void* param){$/;"	f
+signalHandler	dio_shark.c	/^void signalHandler(int idxSignal)$/;"	f
+start_lba	dio_shark.h	/^	uint64_t start_lba;$/;"	m	struct:blk_user_trace_setup
+td	dio_shark.h	/^	pthread_t td;$/;"	m	struct:thread_shark
+thread_shark	dio_shark.h	/^struct thread_shark{$/;"	s
+usage_detail	dio_shark.c	/^char usage_detail[] = 	"\\n"\\$/;"	v
+wait_comeback_shark	dio_shark.c	/^void* wait_comeback_shark(struct list_head* shark_boss)$/;"	f
+wait_open_debugfs	dio_shark.c	/^bool wait_open_debugfs(void)$/;"	f
