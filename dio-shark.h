@@ -10,7 +10,6 @@
 
 #include <pthread.h>
 #include <stdbool.h>
-#include "dst/dio-list.h"
 /* defines */
 
 #define BLKTRACESETUP _IOWR(0x12,115,struct user_setup)

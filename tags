@@ -4,23 +4,17 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
-ARG_OPTS	dio-shark.c	164;"	d	file:
-BLKTRACESETUP	dio-shark.h	16;"	d
-BLKTRACESTART	dio-shark.h	17;"	d
-BLKTRACESTOP	dio-shark.h	18;"	d
-BLKTRACETEARDOWN	dio-shark.h	19;"	d
-DIO_LIST_H	dst/dio-list.h	2;"	d
+ARG_OPTS	dio-shark.c	167;"	d	file:
+BLKTRACESETUP	dio-shark.h	15;"	d
+BLKTRACESTART	dio-shark.h	16;"	d
+BLKTRACESTOP	dio-shark.h	17;"	d
+BLKTRACETEARDOWN	dio-shark.h	18;"	d
 DIO_SHARK_H	dio-shark.h	2;"	d
 OBJS	Makefile	/^OBJS=dio-shark.o$/;"	m
 SHARK_DONE	dio-shark.h	/^	SHARK_DONE		\/\/shark thread done all of works$/;"	e	enum:shark_stat
 SHARK_READY	dio-shark.h	/^	SHARK_READY = 0,	\/\/shark thread is ready$/;"	e	enum:shark_stat
 SHARK_SICK	dio-shark.h	/^	SHARK_SICK,		\/\/shark thread has problem$/;"	e	enum:shark_stat
 SHARK_WORKING	dio-shark.h	/^	SHARK_WORKING,$/;"	e	enum:shark_stat
-__create_list_node	dst/dio-list.h	/^static struct dl_node* __create_list_node(void* pdata){$/;"	f
-__foreach_list	dst/dio-list.h	86;"	d
-__init_dl_head	dst/dio-list.h	43;"	d
-__init_dl_node	dst/dio-list.h	64;"	d
-__insert_node	dst/dio-list.h	115;"	d
 act_mask	dio-shark.h	/^	__u16 act_mask;                 \/* input *\/$/;"	m	struct:user_setup
 arg_opts	dio-shark.c	/^static struct option arg_opts[] = {$/;"	v	typeref:struct:option	file:
 buf_nr	dio-shark.h	/^	__u32 buf_nr;                   \/* input *\/$/;"	m	struct:user_setup
@@ -30,39 +24,25 @@ cond	dio-shark.h	/^	pthread_cond_t cond;$/;"	m	struct:shark_inven
 cpu	dio-shark.h	/^	int cpu;$/;"	m	struct:tracer
 cpu_info	dio-shark.h	/^struct cpu_info{$/;"	s
 cpuinfo	dio-shark.h	/^	struct cpu_info cpuinfo;$/;"	m	struct:shark_inven	typeref:struct:shark_inven::cpu_info
-create_list_head	dst/dio-list.h	/^static struct dl_head* create_list_head(d_deleter d_del_handler){$/;"	f
-d_deleter	dst/dio-list.h	/^typedef void(*d_deleter)(void*);$/;"	t
 debugFilePath	dio-shark.h	/^	char debugFilePath[256];$/;"	m	struct:tracer
-del_handler	dst/dio-list.h	/^	d_deleter del_handler;$/;"	m	struct:dl_head
 del_sharks	dio-shark.c	/^void del_sharks(void* pdata){$/;"	f
 devpath	dio-shark.h	/^struct devpath {$/;"	s
 dfp	dio-shark.h	/^	int dfp, ofp;$/;"	m	struct:tracer
-dl_head	dst/dio-list.h	/^struct dl_head{$/;"	s
-dl_node	dst/dio-list.h	/^struct dl_node{$/;"	s
 dp	dio-shark.c	/^static struct devpath dp;$/;"	v	typeref:struct:devpath	file:
-drops	dio-shark.h	/^	unsigned long long drops;$/;"	m	struct:devpath
 end_lba	dio-shark.h	/^	__u64 end_lba;$/;"	m	struct:user_setup
 fd	dio-shark.h	/^	int fd, ncpus;$/;"	m	struct:devpath
-head	dst/dio-list.h	/^	struct dl_node head;$/;"	m	struct:dl_head	typeref:struct:dl_head::dl_node
-insert_data	dst/dio-list.h	/^static bool insert_data(struct dl_head* pdlh, void* pdata, int idx){$/;"	f
-length	dst/dio-list.h	/^	int length;$/;"	m	struct:dl_head
 list	dio-shark.h	/^	struct dl_head* list;$/;"	m	struct:shark_inven	typeref:struct:shark_inven::dl_head
 main	dio-shark.c	/^int main(int argc, char** argv){$/;"	f
 mt_cond	dio-shark.c	/^static pthread_cond_t mt_cond    = PTHREAD_COND_INITIALIZER;$/;"	v	file:
 mt_mutext	dio-shark.c	/^static pthread_mutex_t mt_mutext = PTHREAD_MUTEX_INITIALIZER;$/;"	v	file:
 name	dio-shark.h	/^	char name[32];$/;"	m	struct:user_setup
 ncpus	dio-shark.h	/^	int fd, ncpus;$/;"	m	struct:devpath
-nxt	dst/dio-list.h	/^	struct dl_node *nxt, *prv;$/;"	m	struct:dl_node	typeref:struct:dl_node::dl_node
 ofp	dio-shark.h	/^	int dfp, ofp;$/;"	m	struct:tracer
 outputFilePath	dio-shark.h	/^	char outputFilePath[256];$/;"	m	struct:tracer
 parse_args	dio-shark.c	/^bool parse_args(int argc, char** argv){$/;"	f
 path	dio-shark.h	/^	char *path;$/;"	m	struct:devpath
-pdata	dst/dio-list.h	/^	void* pdata;$/;"	m	struct:dl_node
 pfds	dio-shark.h	/^	struct pollfd *pfds;$/;"	m	struct:tracer	typeref:struct:tracer::pollfd
 pid	dio-shark.h	/^	__u32 pid;$/;"	m	struct:user_setup
-prv	dst/dio-list.h	/^	struct dl_node *nxt, *prv;$/;"	m	struct:dl_node	typeref:struct:dl_node::
-push_back_data	dst/dio-list.h	/^static void push_back_data(struct dl_head* pdlh, void* pdata){$/;"	f
-search_at	dst/dio-list.h	/^static struct dl_node* search_at(struct dl_head* pdlh, int idx){$/;"	f
 set_devpath	dio-shark.c	/^static int set_devpath(char *path){$/;"	f	file:
 setup	dio-shark.c	/^static struct user_setup setup;$/;"	v	typeref:struct:user_setup	file:
 shark_body	dio-shark.c	/^void* shark_body(void* param){$/;"	f
