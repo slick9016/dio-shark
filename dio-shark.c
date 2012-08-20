@@ -28,7 +28,6 @@
 /* define macro and structure define */
 
 /* global variables */
-static struct dl_head* sharks;	//This list's entity data type is struct shark_inven
 static struct devpath dp;
 static struct tracer *tp;
 
@@ -40,13 +39,10 @@ static int thread_start = 0;
 
 /* function declaration */
 static void sig_handler(__attribute__((__unused__)) int sig);
+
 bool parse_args(int argc, char** argv);
 
 void stop_shark();
-
-void del_sharks(void* pdata);
-
-void* shark_body(void* param);
 
 static int set_devpath(char *path);
 
@@ -161,8 +157,6 @@ void stop_shark() {
 	
 }
 
-void del_sharks(void* pdata){
-}
 /* start parse_args */
 #define ARG_OPTS "d:o:"
 static struct option arg_opts[] = {
@@ -224,26 +218,3 @@ static int set_devpath(char *path){
 	dp.path = strdup(path);
 		
 }
-
-
-void* shark_body(void* param){
-	struct shark_inven* inven = (struct shark_inven*)param;
-
-	//get cpu info
-	//set pollfd
-	//set outfd
-	//set poll event
-	inven->stat = SHARK_READY;
-	//shark_signal(inven->cond);
-
-	//wait gunfire
-	//ioctl start
-	while(1){
-
-	}
-	//ioctl stop
-	//signal done
-
-	return NULL;
-}
-
