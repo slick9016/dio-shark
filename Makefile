@@ -1,4 +1,4 @@
-OBJS=dio_shark.o
+OBJS=dio-shark.o
 
 all : $(OBJS)
 	gcc -o dio-shark $(OBJS) -lpthread
@@ -7,4 +7,4 @@ all : $(OBJS)
 	gcc -c $<
 
 clean : 
-	rm -f $(OBJS)
+	rm -f $(OBJS) dio-shark
