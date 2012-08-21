@@ -17,10 +17,11 @@
 #include <fcntl.h>		// O_RDONLY, O_WRONLY, O_CREAT
 #include <sys/ioctl.h>		// ioctl()
 #include <stdbool.h>		// bool, true, false
+#include <sys/poll.h>
 #include <pthread.h>		// pthread_mutex_t, pthread_cond_t, pthread_create(), \
-							pthread_cond_wait(), pthread_mutex_lock(), \
-							pthread_mutex_unlock(), pthread_cond_signal(),\
-							PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER
+				pthread_cond_wait(), pthread_mutex_lock(), \
+				pthread_mutex_unlock(), pthread_cond_signal(),\
+				PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER
 
 #include "dio_shark.h"
 //#include "dst/dio_list.h"
@@ -35,8 +36,6 @@
 #define	BUTS_STAT_STOPPED	3
 
 /* global variables */
-//static int cpucnt = 0;	//number of CPUs
-//static struct dl_head* sharks;	//This list's entity data type is struct shark_inven
 bool g_isdone = false;
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t g_cond	= PTHREAD_COND_INITIALIZER;
@@ -59,7 +58,7 @@ void* wait_comeback_shark(struct list_head* shark_boss);
 void fasten_sharks(struct list_head* shark_boss);
 
 int openfile_device(char *devpath);
-int openfile_debugfs(void);
+int openfile_debugfs(int idxCPU);
 int openfile_output(void);
 
 void setup_buts(struct blk_user_trace_setup *pbuts);
@@ -270,23 +269,14 @@ bool loose_sharks(struct list_head* shark_boss, int numCPU){
 	struct thread_shark *tmpShark;
 	int i;
 
-	printf("\tnumCPU = %d \n", numCPU);
-
-	printf("\tprev = %d \n", shark_boss->prev);
-	printf("\tshark_boss = %d \n", shark_boss);
-	printf("\tnext = %d \n", shark_boss->next);
 	// install threads
 	for(i=0 ; i<numCPU ; i++)
 	{
-		printf("\tloose_shark(%d) entry \n", i);
 		tmpShark = loose_shark(i);
-		tmpShark->idxCPU = i;
 		
 		if(tmpShark == NULL)
 			return false;
-		printf("\tlist_add_tail() entry \n");
 		list_add_tail(&(tmpShark->list), shark_boss);
-		printf("\tlist_add_tail() terminate \n");
 	}
 
 	return true;
@@ -297,6 +287,7 @@ struct thread_shark* loose_shark(int idxCPU)
 	int ret;
 
 	shark = (struct thread_shark*)malloc(sizeof(struct thread_shark));
+	shark->idxCPU = idxCPU;
 	ret = pthread_create(&(shark->td), NULL, shark_body, shark);
 	if(ret)
 	{
@@ -323,7 +314,6 @@ void* wait_comeback_shark(struct list_head* shark_boss)
 	{
 		struct thread_shark *tmpShark;
 		tmpShark = list_entry(p, struct thread_shark, list);
-		printf("tmpShark = %d \n", tmpShark);
 		pthread_join(tmpShark->td, tReturn);
 	}
 }
@@ -358,7 +348,7 @@ bool wait_open_debugfs(struct list_head* shark_boss)
 		struct thread_shark *tmpShark;
 
 		tmpShark = list_entry(p, struct thread_shark, list);
-		if(tmpShark->isOpenDebugfs == false)
+		while(tmpShark->isOpenDebugfs == false)
 		{
 			pthread_cond_wait(&g_cond, &g_mutex);	// wait until open
 		}
@@ -372,15 +362,15 @@ bool wait_open_debugfs(struct list_head* shark_boss)
 void* shark_body(void* param){
 	struct blk_user_trace_setup buts;
 	struct thread_shark *shark = param;
-	int fdDebugfs, fdOutput;
+	struct pollfd fdpoll;
+	int fdOutput;
 	char buf[BUF_SIZE];
 	int lenred;
-
-	printf("shark_body() entry \n");
+	int ret;
 
 	// open debug file
-	fdDebugfs = openfile_debugfs();
-	if(fdDebugfs < 0)
+	fdpoll.fd = openfile_debugfs(shark->idxCPU);
+	if(fdpoll.fd < 0)
 	{
 		fprintf(stderr, "openfile_debugfs() failed:%d/%s\n", errno, strerror(errno));
 		goto out;
@@ -400,14 +390,33 @@ void* shark_body(void* param){
 		goto out;
 	}
 
+	// set poll data
+	fdpoll.events	= POLLIN;
+	fdpoll.revents	= 0;
+
 	// get i/o data
 	while(!g_isdone)
 	{
-		lenred = read(fdDebugfs, buf, sizeof(buf));
-		if(lenred < 0)
+		ret = poll(&fdpoll, 1, 500);
+		if(ret < 0)
 		{
-			fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
+			fprintf(stderr, "poll() failed:%d/%s\n", errno, strerror(errno));
 			goto out;
+		}
+		else if(ret == 0)
+		{
+			continue;
+		}
+		
+		if(fdpoll.revents & POLLIN)
+		{
+			memset(buf, 0, sizeof(buf));
+			lenred = read(fdpoll.fd, buf, sizeof(buf));
+			if(lenred < 0)
+			{
+				fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
+				goto out;
+			}
 		}
 
 		write(fdOutput, buf, lenred);
@@ -419,8 +428,8 @@ out:
 		close(fdOutput);
 
 	// close debugfs file
-	if(!(fdDebugfs < 0))
-		close(fdDebugfs);
+	if(!(fdpoll.fd < 0))
+		close(fdpoll.fd);
 	
 	return NULL;
 }
@@ -435,11 +444,15 @@ int openfile_device(char *devpath){
 
 	return fdDevice;
 }
-int openfile_debugfs(void)
+int openfile_debugfs(int idxCPU)
 {
 	int fdDebugfs;
+	char buf[255];
 
-	fdDebugfs = open("/sys/kernel/debug/block/sda/dropped", O_RDONLY);
+	memset(buf, 0, sizeof(buf));
+	sprintf(buf, "/sys/kernel/debug/block/sda/trace%d", idxCPU);
+
+	fdDebugfs = open(buf, O_RDONLY);
 	if (fdDebugfs < 0)
 		return -1;
 
