@@ -417,9 +417,9 @@ void* shark_body(void* param){
 				fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
 				goto out;
 			}
-		}
 
-		write(fdOutput, buf, lenred);
+			write(fdOutput, buf, lenred);
+		}
 	}
 
 out:
