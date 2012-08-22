@@ -72,7 +72,7 @@ int main(int argc, char** argv){
 	struct blk_user_trace_setup buts;
 	struct list_head *shark_boss = NULL;
 	struct list_head *p;
-	int buts_stat;
+	int buts_stat = BUTS_STAT_NONE;
 	int ret;
 
 	printf("sysconf() entry \n");
@@ -105,7 +105,7 @@ int main(int argc, char** argv){
 	printf("ioctl-BLKTRACESETUP entry \n");
 	// device controller setup
 	ret = ioctl(fdDevice, BLKTRACESETUP, &buts);
-	if(ret < 0)	
+	if(ret < 0)
 	{
 		fprintf(stderr, "ioctl-BLKTRACESETUP failed: %d/%s\n", errno, strerror(errno));
 		goto out;
@@ -151,6 +151,12 @@ out:
 		if(ret < 0)
 		{
 			fprintf(stdout, "ioctl-BLKTRACESTOP failed: %d/%s\n", errno, strerror(errno));
+		}
+
+		ret = ioctl(fdDevice, BLKTRACEDOWN);
+		if(ret < 0)
+		{
+			fprintf(stdout, "ioctl-BLKTRACEDOWN failed: %d/%s\n", errno, strerror(errno));
 		}
 	}
 
