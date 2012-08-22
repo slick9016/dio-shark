@@ -365,7 +365,7 @@ void* shark_body(void* param){
 	struct pollfd fdpoll;
 	int fdOutput;
 	char buf[BUF_SIZE];
-	int lenred;
+	int lenread;
 	int ret;
 
 	// open debug file
@@ -411,14 +411,14 @@ void* shark_body(void* param){
 		if(fdpoll.revents & POLLIN)
 		{
 			memset(buf, 0, sizeof(buf));
-			lenred = read(fdpoll.fd, buf, sizeof(buf));
-			if(lenred < 0)
+			lenread = read(fdpoll.fd, buf, sizeof(buf));
+			if(lenread < 0)
 			{
 				fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
 				goto out;
 			}
 
-			write(fdOutput, buf, lenred);
+			write(fdOutput, buf, lenread);
 		}
 	}
 
