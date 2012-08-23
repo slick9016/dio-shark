@@ -51,6 +51,7 @@ void put_signalHandler(void);
 
 bool wait_open_debugfs(struct list_head* shark_boss);
 void* shark_body(void* param);
+bool lock_shark_on_cpu(int idxCPU);
 
 bool loose_sharks(struct list_head* shark_boss, int numCPU);
 struct thread_shark* loose_shark(int idxCPU);
@@ -374,6 +375,14 @@ void* shark_body(void* param){
 	int lenread;
 	int ret;
 
+	// lock this thread on one cpu
+	ret = lock_shark_on_cpu(shark->idxCPU);
+	if(!ret)
+	{
+		fprintf(stderr, "lock_shark_on_cpu() failed:%d/%s\n", errno, strerror(errno));
+		goto out;
+	}
+
 	// open debug file
 	fdpoll.fd = openfile_debugfs(shark->idxCPU);
 	if(fdpoll.fd < 0)
@@ -438,6 +447,25 @@ out:
 		close(fdpoll.fd);
 	
 	return NULL;
+}
+bool lock_shark_on_cpu(int idxCPU)
+{
+	cpu_set_t cpumask;
+	int ret;
+
+	// set cpu
+	CPU_ZERO(&cpumask);
+	CPU_SET(idxCPU, &cpumask);
+	
+	// lock cpu
+	/*
+		If sched_setaffinity()'s pid(parameter1) is 0,
+		this pid point me.
+	*/
+	ret = sched_setaffinity(0, sizeof(cpumask), &cpumask);
+	if(ret < 0)
+		return false;
+	return true;
 }
 
 int openfile_device(char *devpath){
