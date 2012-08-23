@@ -1,3 +1,4 @@
 *.o
+*.swp
 dio-shark.out
 tags
