@@ -1,11 +1,13 @@
 /*
-	dio_shark.c
-	the main project source file
-	it contains 'main' function
+   dio_shark.c
+   the main project source file
+   it contains 'main' function
 
-	dio-shark is disk block tracing and analysis tool
-	it will loosing sharks to each cpu
-*/
+   dio-shark is disk block tracing and analysis tool
+   it will loosing sharks to each cpu
+ */
+
+#define DEBUG
 
 #define _GNU_SOURCE		// it need to use CPU_ZERO(), CPU_SET()
 
@@ -21,10 +23,7 @@
 #include <stdbool.h>		// bool, true, false
 #include <sys/poll.h>
 #include <sched.h>		// CPU_ZERO(), CPU_SET(), shed_setaffinity()
-#include <pthread.h>		// pthread_mutex_t, pthread_cond_t, pthread_create(), \
-				pthread_cond_wait(), pthread_mutex_lock(), \
-				pthread_mutex_unlock(), pthread_cond_signal(),\
-				PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER
+#include <pthread.h>
 
 #include "dio_shark.h"
 //#include "dst/dio_list.h"
@@ -70,7 +69,7 @@ void setup_buts(struct blk_user_trace_setup *pbuts);
 
 /*
    main function
-*/
+ */
 int main(int argc, char** argv){
 	int numCPU;
 	int fdDevice = 0;
@@ -80,23 +79,23 @@ int main(int argc, char** argv){
 	int buts_stat = BUTS_STAT_NONE;
 	int ret;
 
-	printf("sysconf() entry \n");
+	DBGOUT("sysconf() entry \n");
 	// get the number of cpus
 	numCPU = sysconf(_SC_NPROCESSORS_ONLN);
-	printf("set_signalHandler() entry \n");
+	DBGOUT("set_signalHandler() entry \n");
 	// set signal handler function
 	set_signalHandler();
 
 	// handle args
 	/*
-	if( !parse_args(argc, argv) )
-	{
-		printf("asdf");
-		fprintf(stderr, "dio-shark argument error.\n");
-		goto out;
-	}
-	*/
-	printf("openfile_device() entry \n");
+	   if( !parse_args(argc, argv) )
+	   {
+	   printf("asdf");
+	   fprintf(stderr, "dio-shark argument error.\n");
+	   goto out;
+	   }
+	 */
+	DBGOUT("openfile_device() entry \n");
 	// open device file	
 	fdDevice = openfile_device("/dev/sda");
 	if(fdDevice < 0)
@@ -104,10 +103,10 @@ int main(int argc, char** argv){
 		fprintf(stderr, "openfile_device() failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
-	printf("setup_buts() entry \n");
+	DBGOUT("setup_buts() entry \n");
 	// setup blk_user_trace_setup
 	setup_buts(&buts);
-	printf("ioctl-BLKTRACESETUP entry \n");
+	DBGOUT("ioctl-BLKTRACESETUP entry \n");
 	// device controller setup
 	ret = ioctl(fdDevice, BLKTRACESETUP, &buts);
 	if(ret < 0)
@@ -116,10 +115,10 @@ int main(int argc, char** argv){
 		goto out;
 	}
 	buts_stat = BUTS_STAT_SETUPED;
-	printf("create_list_head() entry \n");
+	DBGOUT("create_list_head() entry \n");
 	// create list head for creating threads
 	shark_boss = create_list_head();
-	printf("loose_sharks() entry \n");
+	DBGOUT("loose_sharks() entry \n");
 	// initialize barrier variable
 	pthread_barrier_init(&g_barrier, NULL, numCPU + 1);
 
@@ -130,10 +129,10 @@ int main(int argc, char** argv){
 		fprintf(stderr, "loose_sharks() failed: %d/%s\n", errno, strerror(errno));
 		goto out;
 	}
-	printf("wait_open_debugfs() entry \n");
+	DBGOUT("wait_open_debugfs() entry \n");
 	// wait until open debug file
 	wait_open_debugfs();
-	printf("ioctl-BLKTRACESTART entry \n");
+	DBGOUT("ioctl-BLKTRACESTART entry \n");
 	// device controller start
 	ret = ioctl(fdDevice, BLKTRACESTART);
 	if(ret < 0)
@@ -142,11 +141,12 @@ int main(int argc, char** argv){
 		goto out;
 	}
 	buts_stat = BUTS_STAT_STARTED;
-	printf("wait_comeback_shark() entry \n");
+	DBGOUT("wait_comeback_shark() entry \n");
 	// wait until all thread terminate
 	wait_comeback_shark(shark_boss);
-
 out:
+
+	DBGOUT("buts_stat = %d \n", buts_stat);
 	// device controller stop
 	if(buts_stat != BUTS_STAT_NONE)
 	{
@@ -168,13 +168,13 @@ out:
 	{
 		fasten_sharks(shark_boss);
 	}
-	
+
 	// destroy list head
 	if(shark_boss != NULL)
 	{
 		free(shark_boss);
 	}
-	
+
 	// close device file
 	if(fdDevice != 0)
 	{
@@ -215,11 +215,11 @@ static struct option arg_opts[] = {
 };
 
 char usage_detail[] = 	"\n"\
-			"  [ -d <device> ]\n"\
-			"  [ -o <outfile> ]\n"\
-			"\n"\
-			"\t-d : device which is traced\n"\
-			"\t-o : output file name\n";
+			 "  [ -d <device> ]\n"\
+			 "  [ -o <outfile> ]\n"\
+			 "\n"\
+			 "\t-d : device which is traced\n"\
+			 "\t-o : output file name\n";
 
 bool parse_args(int argc, char** argv){
 	char tok;
@@ -273,7 +273,7 @@ void put_signalHandler(void)
 
 /*
    Install Threads to get i/o data. 
-*/
+ */
 bool loose_sharks(struct list_head* shark_boss, int numCPU){
 	struct thread_shark *tmpShark;
 	int i;
@@ -282,7 +282,7 @@ bool loose_sharks(struct list_head* shark_boss, int numCPU){
 	for(i=0 ; i<numCPU ; i++)
 	{
 		tmpShark = loose_shark(i);
-		
+
 		if(tmpShark == NULL)
 			return false;
 		list_add_tail(&(tmpShark->list), shark_boss);
@@ -301,7 +301,7 @@ struct thread_shark* loose_shark(int idxCPU)
 	if(ret)
 	{
 		fprintf(stderr, "pthread_create(idxCPU:%d) failed:%d/%s\n", idxCPU, errno, strerror(errno));
-		
+
 		goto out;
 	}
 
@@ -311,7 +311,7 @@ out:
 	// release tshark memory
 	if(shark != NULL)
 		free(shark);
-	
+
 	return NULL;
 }
 void* wait_comeback_shark(struct list_head* shark_boss)
@@ -329,7 +329,7 @@ void* wait_comeback_shark(struct list_head* shark_boss)
 void fasten_sharks(struct list_head* shark_boss)
 {
 	struct list_head* p, *q;
-	
+
 	list_for_each_safe(p, q, shark_boss)
 	{
 		struct thread_shark *tmpShark;
@@ -396,7 +396,7 @@ void* shark_body(void* param){
 		{
 			continue;
 		}
-		
+
 		if(fdpoll.revents & POLLIN)
 		{
 			memset(buf, 0, sizeof(buf));
@@ -419,7 +419,7 @@ out:
 	// close debugfs file
 	if(!(fdpoll.fd < 0))
 		close(fdpoll.fd);
-	
+
 	return NULL;
 }
 bool lock_shark_on_cpu(int idxCPU)
@@ -430,12 +430,12 @@ bool lock_shark_on_cpu(int idxCPU)
 	// set cpu
 	CPU_ZERO(&cpumask);
 	CPU_SET(idxCPU, &cpumask);
-	
+
 	// lock cpu
 	/*
-		If sched_setaffinity()'s pid(parameter1) is 0,
-		this pid point me.
-	*/
+	   If sched_setaffinity()'s pid(parameter1) is 0,
+	   this pid point me.
+	 */
 	ret = sched_setaffinity(0, sizeof(cpumask), &cpumask);
 	if(ret < 0)
 		return false;
@@ -446,7 +446,6 @@ int openfile_device(char *devpath){
 	int fdDevice;
 
 	fdDevice = open(devpath, O_RDONLY);
-	printf("%d \n", fdDevice);
 	if (fdDevice < 0)
 		return -1;
 
