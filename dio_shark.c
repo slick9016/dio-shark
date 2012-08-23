@@ -329,9 +329,9 @@ void* wait_comeback_shark(struct list_head* shark_boss)
 }
 void fasten_sharks(struct list_head* shark_boss)
 {
-	struct list_head* p;
+	struct list_head* p, *q;
 	
-	//list_for_each_prev(p, shark_boss)
+	list_for_each_safe(p, q, shark_boss)
 	{
 		struct thread_shark *tmpShark;
 		tmpShark = list_entry(p, struct thread_shark, list);
