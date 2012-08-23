@@ -7,6 +7,8 @@
 	it will loosing sharks to each cpu
 */
 
+#define _GNU_SOURCE		// it need to use CPU_ZERO(), CPU_SET()
+
 #include <errno.h>		// errno, strerror()
 #include <stdlib.h>		// malloc(), SIGINT, SIGHUP, SIGTERM, SIGPIPE, SIG_IGN
 #include <signal.h>		// SIGINT, SIGHUP, SIGTERM, SIGPIPE, SIG_IGN
@@ -18,6 +20,7 @@
 #include <sys/ioctl.h>		// ioctl()
 #include <stdbool.h>		// bool, true, false
 #include <sys/poll.h>
+#include <sched.h>		// CPU_ZERO(), CPU_SET(), shed_setaffinity()
 #include <pthread.h>		// pthread_mutex_t, pthread_cond_t, pthread_create(), \
 				pthread_cond_wait(), pthread_mutex_lock(), \
 				pthread_mutex_unlock(), pthread_cond_signal(),\
