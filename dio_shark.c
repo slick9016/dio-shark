@@ -157,7 +157,7 @@ out:
 			fprintf(stdout, "ioctl-BLKTRACESTOP failed: %d/%s\n", errno, strerror(errno));
 		}
 
-		ret = ioctl(fdDevice, BLKTRACEDOWN);
+		ret = ioctl(fdDevice, BLKTRACETEARDOWN);
 		if(ret < 0)
 		{
 			fprintf(stdout, "ioctl-BLKTRACEDOWN failed: %d/%s\n", errno, strerror(errno));
