@@ -323,7 +323,7 @@ void* wait_comeback_shark(struct list_head* shark_boss)
 	{
 		struct thread_shark *tmpShark;
 		tmpShark = list_entry(p, struct thread_shark, list);
-		pthread_join(tmpShark->td, tReturn);
+		pthread_join(tmpShark->td, &tReturn);
 	}
 }
 void fasten_sharks(struct list_head* shark_boss)
