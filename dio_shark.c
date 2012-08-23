@@ -469,7 +469,7 @@ int openfile_debugfs(int idxCPU)
 int openfile_output(void)
 {	int fdOutput;
 
-	fdOutput = open("./dioshark.output", O_WRONLY | O_CREAT);
+	fdOutput = open("./dioshark.output", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fdOutput <0)
 		return -1;
 
