@@ -18,6 +18,32 @@
 #include "blktrace_api.h"
 
 /*	struct and defines	*/
+#define BE_TO_LE16(word) \
+	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
+
+#define BE_TO_LE32(dword) \
+	(((dword)>>24 & 0x000000FF) | ((dword)<<24 & 0xFF000000) |\
+	((dword)>>8  & 0x0000FF00) | ((dword)<<8  & 0x00FF0000))
+
+#define BE_TO_LE64(qword) \
+	(((qword)>>56 & 0x00000000000000FF) | ((qword)<<56 & 0xFF00000000000000) |\
+	((qword)>>40 & 0x000000000000FF00) | ((qword)<<40 & 0x00FF000000000000) |\
+	((qword)>>24 & 0x0000000000FF0000) | ((qword)<<24 & 0x0000FF0000000000) |\
+	((qword)>>8  & 0x00000000FF000000) | ((qword)<<8  & 0x000000FF00000000))
+
+#define BE_TO_LE_BIT(bit) \
+	(bit).magic 	= BE_TO_LE32((bit).magic);\
+	(bit).sequence 	= BE_TO_LE32((bit).sequence);\
+	(bit).time	= BE_TO_LE64((bit).time);\
+	(bit).sector	= BE_TO_LE64((bit).sector);\
+	(bit).bytes	= BE_TO_LE32((bit).bytes);\
+	(bit).action	= BE_TO_LE32((bit).action);\
+	(bit).pid	= BE_TO_LE32((bit).pid);\
+	(bit).device	= BE_TO_LE32((bit).device);\
+	(bit).cpu	= BE_TO_LE32((bit).cpu);\
+	(bit).error	= BE_TO_LE16((bit).error);\
+	(bit).pdu_len	= BE_TO_LE16((bit).pdu_len)
+
 #define MAX_ELEMENT_SIZE 10
 struct dio_nugget{
 	char states[MAX_ELEMENT_SIZE];
@@ -88,10 +114,12 @@ int main(int argc, char** argv){
 		}
 		
 		printf("read ok\n");
+		BE_TO_LE_BIT(pde->bit);
+
 		insert_proper_pos(pde);
-		printf("! time %ld, pid %d\n", pde->bit.time, pde->bit.pid);
+		printf("! time %llu, pid %llu\n", pde->bit.time, pde->bit.pid);
 		if( dnugget.sector == -1){
-			printf("nugget sector : %d\n", dnugget.sector);
+			printf("nugget sector : %llu\n", dnugget.sector);
 			dnugget.sector = pde->bit.sector;
 		}else if(dnugget.sector == pde->bit.sector ){
 			dnugget.times[tmp++] = pde->bit.time;
@@ -103,7 +131,7 @@ int main(int argc, char** argv){
 	struct list_head* p = NULL;
 	__list_for_each(p, &(dio_head)){
 		struct dio_entity* _pde = list_entry(p, struct dio_entity, link);
-		printf("time : %ld, sector %ld, action 0x%x, pid %d, cpu %d\n", 
+		printf("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
 			_pde->bit.time, _pde->bit.sector, _pde->bit.action, _pde->bit.pid, _pde->bit.cpu);
 	}
 	printf("end printing\n");
@@ -115,6 +143,7 @@ err:
 		close(ifd);
 	return 0;
 }
+
 
 void insert_proper_pos(struct dio_entity* pde){
 	struct list_head* p = NULL;
