@@ -42,6 +42,7 @@
 bool g_isdone = false;
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t g_cond	= PTHREAD_COND_INITIALIZER;
+pthread_barrier_t g_barrier;
 
 /* function declaration */
 struct list_head* create_list_head(void);
@@ -52,7 +53,7 @@ void signalHandler(int idxSignal);
 void set_signalHandler(void);
 void put_signalHandler(void);
 
-bool wait_open_debugfs(struct list_head* shark_boss);
+void wait_open_debugfs(void);
 void* shark_body(void* param);
 bool lock_shark_on_cpu(int idxCPU);
 
@@ -119,6 +120,9 @@ int main(int argc, char** argv){
 	// create list head for creating threads
 	shark_boss = create_list_head();
 	printf("loose_sharks() entry \n");
+	// initialize barrier variable
+	pthread_barrier_init(&g_barrier, NULL, numCPU + 1);
+
 	// create threads
 	ret = loose_sharks(shark_boss, numCPU);
 	if(ret == (int)false)
@@ -128,12 +132,7 @@ int main(int argc, char** argv){
 	}
 	printf("wait_open_debugfs() entry \n");
 	// wait until open debug file
-	ret = wait_open_debugfs(shark_boss);
-	if(ret == (int)false)
-	{
-		fprintf(stderr, "wait_open_debugfs() failed: %d/%s\n", errno, strerror(errno));
-		goto out;
-	}
+	wait_open_debugfs();
 	printf("ioctl-BLKTRACESTART entry \n");
 	// device controller start
 	ret = ioctl(fdDevice, BLKTRACESTART);
@@ -339,35 +338,9 @@ void fasten_sharks(struct list_head* shark_boss)
 		free(tmpShark);
 	}
 }
-bool wait_open_debugfs(struct list_head* shark_boss)
+void wait_open_debugfs(void)
 {
-	struct list_head* p;
-	int ret;
-
-	// thread mutex lock
-	ret = pthread_mutex_lock(&g_mutex);
-	if(ret != 0)
-	{
-		fprintf(stderr, "pthread_mutex_lock() fail:%d/%s\n", errno, strerror(errno));
-		return false;
-	}
-
-	//while(!g_isdone)	//wait until program done
-	__list_for_each(p, shark_boss)
-	{
-		struct thread_shark *tmpShark;
-
-		tmpShark = list_entry(p, struct thread_shark, list);
-		while(tmpShark->isOpenDebugfs == false)
-		{
-			pthread_cond_wait(&g_cond, &g_mutex);	// wait until open
-		}
-	}
-
-	// thread mutex unlock
-	pthread_mutex_unlock(&g_mutex);
-
-	return true;
+	pthread_barrier_wait(&g_barrier);
 }
 void* shark_body(void* param){
 	struct blk_user_trace_setup buts;
@@ -396,9 +369,7 @@ void* shark_body(void* param){
 	shark->isOpenDebugfs = true;
 
 	// wake thread that wait opening debug file
-	pthread_mutex_lock(&g_mutex);
-	pthread_cond_signal(&g_cond);
-	pthread_mutex_unlock(&g_mutex);
+	pthread_barrier_wait(&g_barrier);	
 
 	// open output file
 	fdOutput = openfile_output();
