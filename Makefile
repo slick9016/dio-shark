@@ -1,4 +1,4 @@
-TARGET=dio-shark.out dio-parse.out
+TARGET=dioshark dioparse
 SHARK_OBJ=dio_shark.o
 PARSE_OBJ=dio_parse.o
 
