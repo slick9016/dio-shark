@@ -1,4 +1,5 @@
 *.o
 *.swp
 dio-shark.out
+dioshark.output
 tags
