@@ -96,6 +96,7 @@ int main(int argc, char** argv){
 	}
 	
 	struct dio_entity* pde = NULL;
+	struct dio_nugget* pdng = NULL;
 
 	int i;
 	while(1){
@@ -123,16 +124,10 @@ int main(int argc, char** argv){
 		
 		printf("read ok\n");
 		BE_TO_LE_BIT(pde->bit);
-
+		
+		//insert to list 
 		insert_proper_pos(pde);
-		printf("! time %llu, pid %llu\n", pde->bit.time, pde->bit.pid);
-		if( dnugget.sector == -1){
-			printf("nugget sector : %llu\n", dnugget.sector);
-			dnugget.sector = pde->bit.sector;
-		}else if(dnugget.sector == pde->bit.sector ){
-			dnugget.times[tmp++] = pde->bit.time;
-			printf("same sector!\n");
-		}
+	
 	}
 
 	printf("end spliting.\ngo printing\n");
@@ -177,9 +172,9 @@ struct dio_nugget* rb_search_nugget(uint64_t sector){
 	while(rn){
 		dn = rb_entry(rn, struct dio_nugget, link);
 		if( sector < dn->sector )
-			dn = dn->rb_left;
+			dn = dn->link.rb_left;
 		else if( sector > dn->sector )
-			dn = dn->rb_right;
+			dn = dn->link.rb_right;
 		else
 			return dn;	//find
 	}
@@ -195,9 +190,9 @@ struct dio_nugget* __rb_insert_nugget(struct dio_nugget* pdng){
 		parent = *p;
 		dn = rb_entry(parent, struct dio_nugget, link);
 
-		if( pdng->sector < dn->sector ){
+		if( pdng->sector < dn->sector )
 			p = &(*p)->rb_left;
-		else if( pdng->sector > dn_sector ){
+		else if( pdng->sector > dn_sector )
 			p = &(*p)->rb_right;
 		else
 			return dn;
@@ -210,7 +205,7 @@ struct dio_nugget* __rb_insert_nugget(struct dio_nugget* pdng){
 struct dio_nugget* rb_insert_nugget(struct dio_nugget* pdng){
 	struct dio_nugget* ret;
 	if( (ret = __rb_insert_nugget(pdng))
-		return ret;	//there already exists
+		return ret;	//there already exist
 
 	rb_insert_color(&(pdng->link), &(dng_root));
 	return NULL;
