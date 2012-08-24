@@ -51,7 +51,8 @@
 struct dio_nugget{
 	struct rb_node link;	//rbtree linker
 
-	char states[MAX_ELEMENT_SIZE];
+	int elemidx;	//element index
+	char states[MAX_ELEMENT_SIZE];	//action
 	uint64_t times[MAX_ELEMENT_SIZE];
 	char type[5];
 	uint64_t sector;
@@ -66,8 +67,16 @@ struct dio_entity{
 
 
 /*	function interfaces	*/
+#define DBG_PRINT(log, ... ) \
+		printf(log, ... );
+#define ERR_PRINT(log, ... ) \
+		fprintf(stderr, log, ... );
+
+//function for bit list
 static void insert_proper_pos(struct dio_entity* pde);
 
+//function for nugget
+static void init_nugget(struct dio_nugget* pdng);
 static struct dio_nugget* rb_search_nugget(uint64_t sector);
 static struct dio_nugget* __rb_insert_nugget(struct dio_nugget* pdng);
 static struct dio_nugget* rb_insert_nugget(struct dio_nugget* pdng);
@@ -83,6 +92,7 @@ static struct list_head de_head;
 int main(int argc, char** argv){
 
 	INIT_LIST_HEAD(&de_head);
+	dng_root = RB_ROOT;
 
 	int ifd = -1;
 	int rdsz = 0;
@@ -127,10 +137,25 @@ int main(int argc, char** argv){
 		
 		//insert to list 
 		insert_proper_pos(pde);
-	
+		
+		pdng = rb_search_nugget( pde->bit.sector );
+		if( pdng == NULL ){
+			printf(" > %llu isn't in tree\n", pde->bit.sector);
+			pdng = (struct dio_nugget*)malloc(sizeof(struct dio_nugget));
+			if( pdng == NULL ){
+				perror("failed to allocate nugget memory");
+				goto err;
+			}
+			init_nugget(pdng);
+			pdng->sector = pde->bit.sector;
+			rb_insert_nugget(pdng);	//it doesn't need to check null (already checked above)
+		}
+
+		pdng->states[pdng->elemidx] = 'Q';	//this line will be modified to switch case
 	}
 
-	printf("end spliting.\ngo printing\n");
+	//test printing
+	printf("end parse.\nprint start\n");
 	struct list_head* p = NULL;
 	__list_for_each(p, &(de_head)){
 		struct dio_entity* _pde = list_entry(p, struct dio_entity, link);
@@ -149,7 +174,6 @@ err:
 	return 0;
 }
 
-
 void insert_proper_pos(struct dio_entity* pde){
 	struct list_head* p = NULL;
 	struct dio_entity* _pde = NULL;
@@ -165,6 +189,11 @@ void insert_proper_pos(struct dio_entity* pde){
 	list_add(&(pde->link), &(de_head));
 }
 
+void init_nugget(struct dio_nugget* pdng){
+	memset(pdng, 0, sizeof(struct dio_nugget));
+	pdng->elemidx = 0;
+}
+
 struct dio_nugget* rb_search_nugget(uint64_t sector){
 	struct rb_node* rn = dng_root.rb_node;
 	struct dio_nugget* dn = NULL;
@@ -172,9 +201,9 @@ struct dio_nugget* rb_search_nugget(uint64_t sector){
 	while(rn){
 		dn = rb_entry(rn, struct dio_nugget, link);
 		if( sector < dn->sector )
-			dn = dn->link.rb_left;
+			rn = dn->link.rb_left;
 		else if( sector > dn->sector )
-			dn = dn->link.rb_right;
+			rn = dn->link.rb_right;
 		else
 			return dn;	//find
 	}
@@ -192,19 +221,19 @@ struct dio_nugget* __rb_insert_nugget(struct dio_nugget* pdng){
 
 		if( pdng->sector < dn->sector )
 			p = &(*p)->rb_left;
-		else if( pdng->sector > dn_sector )
+		else if( pdng->sector > dn->sector )
 			p = &(*p)->rb_right;
 		else
 			return dn;
 	}
 
-	rb_link_node(pdng->link, parent, p);
+	rb_link_node(&(pdng->link), parent, p);
 	return NULL;	//success
 }
 
 struct dio_nugget* rb_insert_nugget(struct dio_nugget* pdng){
 	struct dio_nugget* ret;
-	if( (ret = __rb_insert_nugget(pdng))
+	if( (ret = __rb_insert_nugget(pdng)))
 		return ret;	//there already exist
 
 	rb_insert_color(&(pdng->link), &(dng_root));
