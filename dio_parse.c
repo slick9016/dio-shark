@@ -1,5 +1,7 @@
 /*
 	The parser for binary result of dio-shark
+	
+	This source is free on GNU General Public License.
 */
 
 #include <stdlib.h>
@@ -15,6 +17,7 @@
 #include <sys/types.h>
 
 #include "list.h"
+#include "rbtree.h"
 #include "blktrace_api.h"
 
 /*	struct and defines	*/
@@ -44,8 +47,10 @@
 	(bit).error	= BE_TO_LE16((bit).error);\
 	(bit).pdu_len	= BE_TO_LE16((bit).pdu_len)
 
-#define MAX_ELEMENT_SIZE 10
+#define MAX_ELEMENT_SIZE 20
 struct dio_nugget{
+	struct rb_node link;	//rbtree linker
+
 	char states[MAX_ELEMENT_SIZE];
 	uint64_t times[MAX_ELEMENT_SIZE];
 	char type[5];
@@ -59,19 +64,25 @@ struct dio_entity{
 	struct blk_io_trace bit;
 };
 
+
 /*	function interfaces	*/
 static void insert_proper_pos(struct dio_entity* pde);
+
+static struct dio_nugget* rb_search_nugget(uint64_t sector);
+static struct dio_nugget* __rb_insert_nugget(struct dio_nugget* pdng);
+static struct dio_nugget* rb_insert_nugget(struct dio_nugget* pdng);
 
 /*	global variables	*/
 #define MAX_FILEPATH_LEN 255
 static char respath[MAX_FILEPATH_LEN];
+static struct rb_root dng_root;
 
-static struct list_head dio_head;
+static struct list_head de_head;
 
 /*	function implementations	*/
 int main(int argc, char** argv){
 
-	INIT_LIST_HEAD(&dio_head);
+	INIT_LIST_HEAD(&de_head);
 
 	int ifd = -1;
 	int rdsz = 0;
@@ -86,15 +97,13 @@ int main(int argc, char** argv){
 	
 	struct dio_entity* pde = NULL;
 
-	struct dio_nugget dnugget;	//just for test
-	memset(&dnugget, 0, sizeof(struct dio_nugget));
-	dnugget.sector = -1;
-	int tmp=0;
-
-	char c;
 	int i;
 	while(1){
 		pde = (struct dio_entity*)malloc(sizeof(struct dio_entity));
+		if( pde == NULL ){
+			perror("failed to allocate memory");
+			goto err;
+		}
 
 		rdsz = read(ifd, &(pde->bit), sizeof(struct blk_io_trace));
 		if( rdsz < 0 ){
@@ -103,8 +112,7 @@ int main(int argc, char** argv){
 		}
 		else if( rdsz == 0 ){
 			printf("read zero size\n");
-			free(pde);
-			break;
+			goto err;
 		}
 		
 		printf("pdu_len : %d\n", pde->bit.pdu_len);
@@ -129,7 +137,7 @@ int main(int argc, char** argv){
 
 	printf("end spliting.\ngo printing\n");
 	struct list_head* p = NULL;
-	__list_for_each(p, &(dio_head)){
+	__list_for_each(p, &(de_head)){
 		struct dio_entity* _pde = list_entry(p, struct dio_entity, link);
 		printf("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
 			_pde->bit.time, _pde->bit.sector, _pde->bit.action, _pde->bit.pid, _pde->bit.cpu);
@@ -141,6 +149,8 @@ int main(int argc, char** argv){
 err:
 	if( ifd < 0 )
 		close(ifd);
+	if( pde != NULL )
+		free(pde);
 	return 0;
 }
 
@@ -150,12 +160,58 @@ void insert_proper_pos(struct dio_entity* pde){
 	struct dio_entity* _pde = NULL;
 
 	//list foreach back
-	for(p = dio_head.prev; p != &(dio_head); p = p->prev){
+	for(p = de_head.prev; p != &(de_head); p = p->prev){
 		_pde = list_entry(p, struct dio_entity, link);
 		if( _pde->bit.time <= pde->bit.time ){
 			list_add(&(pde->link), p);
 			return;
 		}
 	}
-	list_add(&(pde->link), &(dio_head));
+	list_add(&(pde->link), &(de_head));
+}
+
+struct dio_nugget* rb_search_nugget(uint64_t sector){
+	struct rb_node* rn = dng_root.rb_node;
+	struct dio_nugget* dn = NULL;
+
+	while(rn){
+		dn = rb_entry(rn, struct dio_nugget, link);
+		if( sector < dn->sector )
+			dn = dn->rb_left;
+		else if( sector > dn->sector )
+			dn = dn->rb_right;
+		else
+			return dn;	//find
+	}
+	return NULL;
+}
+
+struct dio_nugget* __rb_insert_nugget(struct dio_nugget* pdng){
+	struct rb_node** p = &dng_root.rb_node;
+	struct rb_node* parent = NULL;
+	struct dio_nugget* dn = NULL;
+
+	while(*p){
+		parent = *p;
+		dn = rb_entry(parent, struct dio_nugget, link);
+
+		if( pdng->sector < dn->sector ){
+			p = &(*p)->rb_left;
+		else if( pdng->sector > dn_sector ){
+			p = &(*p)->rb_right;
+		else
+			return dn;
+	}
+
+	rb_link_node(pdng->link, parent, p);
+	return NULL;	//success
+}
+
+struct dio_nugget* rb_insert_nugget(struct dio_nugget* pdng){
+	struct dio_nugget* ret;
+	if( (ret = __rb_insert_nugget(pdng))
+		return ret;	//there already exists
+
+	rb_insert_color(&(pdng->link), &(dng_root));
+	return NULL;
 }
