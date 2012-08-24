@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "dio_shark.h"
 #include "list.h"
 #include "rbtree.h"
 #include "blktrace_api.h"
@@ -67,11 +68,6 @@ struct dio_entity{
 
 
 /*	function interfaces	*/
-#define DBG_PRINT(log, ... ) \
-		printf(log, ... );
-#define ERR_PRINT(log, ... ) \
-		fprintf(stderr, log, ... );
-
 //function for bit list
 static void insert_proper_pos(struct dio_entity* pde);
 
@@ -122,17 +118,17 @@ int main(int argc, char** argv){
 			goto err;
 		}
 		else if( rdsz == 0 ){
-			printf("read zero size\n");
-			goto err;
+			DBGOUT("end read\n");
+			break;
 		}
 		
-		printf("pdu_len : %d\n", pde->bit.pdu_len);
+		DBGOUT("pdu_len : %d\n", pde->bit.pdu_len);
 		//ignore pdu_len size
 		if( pde->bit.pdu_len > 0 ){
 			lseek(ifd, pde->bit.pdu_len, SEEK_CUR);
 		}
 		
-		printf("read ok\n");
+		DBGOUT("read ok\n");
 		BE_TO_LE_BIT(pde->bit);
 		
 		//insert to list 
@@ -140,7 +136,7 @@ int main(int argc, char** argv){
 		
 		pdng = rb_search_nugget( pde->bit.sector );
 		if( pdng == NULL ){
-			printf(" > %llu isn't in tree\n", pde->bit.sector);
+			DBGOUT(" > %llu isn't in tree\n", pde->bit.sector);
 			pdng = (struct dio_nugget*)malloc(sizeof(struct dio_nugget));
 			if( pdng == NULL ){
 				perror("failed to allocate nugget memory");
@@ -155,14 +151,14 @@ int main(int argc, char** argv){
 	}
 
 	//test printing
-	printf("end parse.\nprint start\n");
+	DBGOUT("end parse.\nprint start\n");
 	struct list_head* p = NULL;
 	__list_for_each(p, &(de_head)){
 		struct dio_entity* _pde = list_entry(p, struct dio_entity, link);
-		printf("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
+		DBGOUT("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
 			_pde->bit.time, _pde->bit.sector, _pde->bit.action, _pde->bit.pid, _pde->bit.cpu);
 	}
-	printf("end printing\n");
+	DBGOUT("end printing\n");
 
 	//clean all list entities
 	return 0;
