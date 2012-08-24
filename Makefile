@@ -2,10 +2,10 @@ TARGET=dioshark dioparse
 SHARK_OBJ=dio_shark.o
 PARSE_OBJ=dio_parse.o rbtree.o
 
-ifeq ($(DEBUG), 1)
-CFLAGS=-D DEBUG -g -O0
-else
+ifeq ($(RELEASE), 1)
 CFLAGS= -O2
+else
+CFLAGS=-D DEBUG -g -O0
 endif
 
 all : $(TARGET)
