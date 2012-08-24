@@ -7,8 +7,6 @@
    it will loosing sharks to each cpu
  */
 
-#define DEBUG
-
 #define _GNU_SOURCE		// it need to use CPU_ZERO(), CPU_SET()
 
 #include <errno.h>		// errno, strerror()
