@@ -15,6 +15,12 @@
 #include "list.h"
 #include "blktrace_api.h"
 
+#ifdef DEBUG
+# define DBGOUT(fmt, ...) printf("[%s] " fmt, __func__, ##__VA_ARGS__)
+#else
+# define DBGOUT(fmt, ...)
+#endif
+
 /* thread info */
 struct thread_shark{
 	struct list_head list;
