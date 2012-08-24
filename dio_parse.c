@@ -147,7 +147,7 @@ int main(int argc, char** argv){
 			rb_insert_nugget(pdng);	//it doesn't need to check null (already checked above)
 		}
 
-		pdng->states[pdng->elemidx] = 'Q';	//this line will be modified to switch case
+		pdng->states[pdng->elemidx++] = 'Q';	//this line will be modified to switch case
 	}
 
 	//test printing
