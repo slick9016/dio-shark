@@ -155,7 +155,7 @@ int main(int argc, char** argv){
 	struct list_head* p = NULL;
 	__list_for_each(p, &(de_head)){
 		struct dio_entity* _pde = list_entry(p, struct dio_entity, link);
-		DBGOUT("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
+		DBGOUT("time : %20llu, sector %20llu, action 0x%08x, pid %10u, cpu %d\n", 
 			_pde->bit.time, _pde->bit.sector, _pde->bit.action, _pde->bit.pid, _pde->bit.cpu);
 	}
 	DBGOUT("end printing\n");
