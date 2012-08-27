@@ -21,15 +21,12 @@
 #include "rbtree.h"
 #include "blktrace_api.h"
 
-<<<<<<< HEAD
 /*	struct and defines	*/
 #define SECONDS(x)              ((unsigned long long)(x) / 1000000000)
 #define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
 
-=======
 /*--------------	struct and defines	------------------*/
->>>>>>> 8f9d655
 #define BE_TO_LE16(word) \
 	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
 
@@ -155,11 +152,7 @@ int main(int argc, char** argv){
 			goto err;
 		}
 		else if( rdsz == 0 ){
-<<<<<<< HEAD
-			//DBGOUT("end read\n");
-=======
 			DBGOUT(">end read\n");
->>>>>>> 8f9d655
 			break;
 		}
 
@@ -181,31 +174,6 @@ int main(int argc, char** argv){
 		i++;
 		}
 		
-<<<<<<< HEAD
-		//DBGOUT("pdu_len : %d\n", pde->bit.pdu_len);
-		//ignore pdu_len size
-		if( pde->bit.pdu_len > 0 ){
-			lseek(ifd, pde->bit.pdu_len, SEEK_CUR);
-		}
-		
-		//DBGOUT("read ok\n");
-		//BE_TO_LE_BIT(pde->bit);
-		
-		//insert to list 
-		insert_proper_pos(pde);
-		
-		pdng = rb_search_nugget( pde->bit.sector );
-		if( pdng == NULL ){
-			//DBGOUT(" > %llu isn't in tree\n", pde->bit.sector);
-			pdng = (struct dio_nugget*)malloc(sizeof(struct dio_nugget));
-			if( pdng == NULL ){
-				perror("failed to allocate nugget memory");
-				goto err;
-			}
-			init_nugget(pdng);
-			pdng->sector = pde->bit.sector;
-			rb_insert_nugget(pdng);	//it doesn't need to check null (already checked above)
-=======
 		//BE_TO_LE_BIT(pbiten->bit);
 
 		DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
@@ -228,13 +196,11 @@ int main(int argc, char** argv){
 		if( pdng == NULL ){
 			DBGOUT(">failed to get nugget at sector %llu\n", pb->bit.sector);
 			goto err;
->>>>>>> 8f9d655
 		}
 		handle_action(pb->bit.action, pdng);
 	}
 
 	//test printing
-<<<<<<< HEAD
 	//DBGOUT("end parse.\nprint start\n");
 	struct list_head* p = NULL;
 	struct dio_entity *_pde = list_entry(de_head.next->next, struct dio_entity, link);
@@ -265,15 +231,6 @@ int main(int argc, char** argv){
 			DBGOUT("\n");
 			i++;
 		}
-=======
-	DBGOUT("end parse.\nprint start\n");
-	p = NULL;
-	__list_for_each(p, &(biten_head)){
-		struct bit_entity* _pbiten = list_entry(p, struct bit_entity, link);
-		DBGOUT("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
-			_pbiten->bit.time, _pbiten->bit.sector, _pbiten->bit.action, 
-			_pbiten->bit.pid, _pbiten->bit.cpu);
->>>>>>> 8f9d655
 	}
 	//DBGOUT("end printing\n");
 
