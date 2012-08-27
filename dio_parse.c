@@ -156,24 +156,6 @@ int main(int argc, char** argv){
 			break;
 		}
 
-		if(i < 5)
-		{
-			DBGOUT("========== bit[%d] ========== \n", i);
-			DBGOUT("sequence : %u \n", pde->bit.sequence);
-			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pde->bit.time), (unsigned long)NANO_SECONDS(pde->bit.time));
-			DBGOUT("sector : %llu \n", pde->bit.sector);
-			DBGOUT("bytes : %u \n", pde->bit.bytes);
-			DBGOUT("action : %u \n", pde->bit.action);
-			DBGOUT("pid : %u \n", pde->bit.pid);
-			DBGOUT("device : %u \n", pde->bit.device);
-			DBGOUT("cpu : %u \n", pde->bit.cpu);
-			DBGOUT("error : %u \n", pde->bit.error);
-			DBGOUT("pdu_len : %u \n", pde->bit.pdu_len);
-			DBGOUT("length of read : %d \n", rdsz);
-			DBGOUT("\n");
-		i++;
-		}
-		
 		//BE_TO_LE_BIT(pbiten->bit);
 
 		DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
@@ -186,9 +168,28 @@ int main(int argc, char** argv){
 		
 		//insert into list order by time
 		insert_proper_pos(pbiten);
+#ifdef DEBUG
+		if(i < 5)
+		{
+			DBGOUT("========== bit[%d] ========== \n", i);
+			DBGOUT("sequence : %u \n", pbiten->bit.sequence);
+			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pbiten->bit.time), (unsigned long)NANO_SECONDS(pbiten->bit.time));
+			DBGOUT("sector : %llu \n", pbiten->bit.sector);
+			DBGOUT("bytes : %u \n", pbiten->bit.bytes);
+			DBGOUT("action : %u \n", pbiten->bit.action);
+			DBGOUT("pid : %u \n", pbiten->bit.pid);
+			DBGOUT("device : %u \n", pbiten->bit.device);
+			DBGOUT("cpu : %u \n", pbiten->bit.cpu);
+			DBGOUT("error : %u \n", pbiten->bit.error);
+			DBGOUT("pdu_len : %u \n", pbiten->bit.pdu_len);
+			DBGOUT("length of read : %d \n", rdsz);
+			DBGOUT("\n");
+		i++;
+		}
+#endif	
 	}
 
-	struct list_head* p= NULL;
+	struct list_head* p = NULL;
 	__list_for_each(p, &biten_head){
 		struct bit_entity* pb = list_entry(p, struct bit_entity, link);
 
@@ -199,40 +200,6 @@ int main(int argc, char** argv){
 		}
 		handle_action(pb->bit.action, pdng);
 	}
-
-	//test printing
-	//DBGOUT("end parse.\nprint start\n");
-	struct list_head* p = NULL;
-	struct dio_entity *_pde = list_entry(de_head.next->next, struct dio_entity, link);
-	__u64 start_time = _pde->bit.time;
-	i = 0;
-	__list_for_each(p, &(de_head)){
-		struct dio_entity* pde = list_entry(p, struct dio_entity, link);
-		if(i < 10)
-		{
-			int act1 = pde->bit.action & 0xffff;
-			int act2 = (pde->bit.action >> 16) & 0xffff;
-
-			pde->bit.time -= start_time;
-			DBGOUT("========== bit[%d] ========== \n", i);
-			DBGOUT("sequence : %u \n", pde->bit.sequence);
-			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pde->bit.time), \
-						 (unsigned long)NANO_SECONDS(pde->bit.time));
-			DBGOUT("sector : %llu \n", pde->bit.sector);
-			DBGOUT("bytes : %u \n", pde->bit.bytes);
-			DBGOUT("action : %u \n", pde->bit.action);
-			DBGOUT("\tTA : %d \n", act1);
-			DBGOUT("\tTC : %d \n", act2);
-			DBGOUT("pid : %u \n", pde->bit.pid);
-			DBGOUT("device : %u \n", pde->bit.device);
-			DBGOUT("cpu : %u \n", pde->bit.cpu);
-			DBGOUT("error : %u \n", pde->bit.error);
-			DBGOUT("pdu_len : %u \n", pde->bit.pdu_len);
-			DBGOUT("\n");
-			i++;
-		}
-	}
-	//DBGOUT("end printing\n");
 
 	//clean all list entities
 	return 0;
