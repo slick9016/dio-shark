@@ -26,6 +26,9 @@
 #define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
 
+#define BLK_ACTION_STRING	"QBFSLRICPUUISBRAD"
+#define GET_ACTION_CHAR(x)	BLK_ACTION_STRING[x & 0xffff]
+
 /*--------------	struct and defines	------------------*/
 #define BE_TO_LE16(word) \
 	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
@@ -198,7 +201,7 @@ int main(int argc, char** argv){
 			DBGOUT(">failed to get nugget at sector %llu\n", pb->bit.sector);
 			goto err;
 		}
-		handle_action(pb->bit.action, pdng);
+		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(pb->bit.action);
 	}
 
 	//clean all list entities
@@ -317,38 +320,4 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 	list_add(&pdng->nglink, &prben->nghead);
 
 	return pdng;
-}
-
-void handle_action(uint32_t act, struct dio_nugget* pdng){
-	switch( act ){
-	case BLK_TA_QUEUE:
-		pdng->states[pdng->elemidx++] = 'Q';
-		break;
-	case BLK_TA_BACKMERGE:
-		pdng->states[pdng->elemidx++] = 'M';
-		break;
-	case BLK_TA_FRONTMERGE:
-		pdng->states[pdng->elemidx++] = 'M';
-		break;
-	case BLK_TA_GETRQ:
-	case BLK_TA_SLEEPRQ:
-	case BLK_TA_REQUEUE:
-	case BLK_TA_ISSUE:
-	case BLK_TA_COMPLETE:
-	case BLK_TA_PLUG:
-	case BLK_TA_UNPLUG_IO:
-	case BLK_TA_UNPLUG_TIMER:
-	case BLK_TA_INSERT:
-	case BLK_TA_SPLIT:
-	case BLK_TA_BOUNCE:
-	case BLK_TA_REMAP:
-	case BLK_TA_ABORT:
-	case BLK_TA_DRV_DATA:
-
-	case BLK_TN_PROCESS:
-	case BLK_TN_TIMESTAMP:
-	case BLK_TN_MESSAGE:
-	default:
-		break;
-	};
 }
