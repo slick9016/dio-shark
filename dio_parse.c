@@ -22,6 +22,10 @@
 #include "blktrace_api.h"
 
 /*	struct and defines	*/
+#define SECONDS(x)              ((unsigned long long)(x) / 1000000000)
+#define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
+#define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
+
 #define BE_TO_LE16(word) \
 	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
 
@@ -104,7 +108,7 @@ int main(int argc, char** argv){
 	struct dio_entity* pde = NULL;
 	struct dio_nugget* pdng = NULL;
 
-	int i;
+	int i = 0;
 	while(1){
 		pde = (struct dio_entity*)malloc(sizeof(struct dio_entity));
 		if( pde == NULL ){
@@ -118,25 +122,43 @@ int main(int argc, char** argv){
 			goto err;
 		}
 		else if( rdsz == 0 ){
-			DBGOUT("end read\n");
+			//DBGOUT("end read\n");
 			break;
 		}
+
+		if(i < 5)
+		{
+			DBGOUT("========== bit[%d] ========== \n", i);
+			DBGOUT("sequence : %u \n", pde->bit.sequence);
+			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pde->bit.time), (unsigned long)NANO_SECONDS(pde->bit.time));
+			DBGOUT("sector : %llu \n", pde->bit.sector);
+			DBGOUT("bytes : %u \n", pde->bit.bytes);
+			DBGOUT("action : %u \n", pde->bit.action);
+			DBGOUT("pid : %u \n", pde->bit.pid);
+			DBGOUT("device : %u \n", pde->bit.device);
+			DBGOUT("cpu : %u \n", pde->bit.cpu);
+			DBGOUT("error : %u \n", pde->bit.error);
+			DBGOUT("pdu_len : %u \n", pde->bit.pdu_len);
+			DBGOUT("length of read : %d \n", rdsz);
+			DBGOUT("\n");
+		i++;
+		}
 		
-		DBGOUT("pdu_len : %d\n", pde->bit.pdu_len);
+		//DBGOUT("pdu_len : %d\n", pde->bit.pdu_len);
 		//ignore pdu_len size
 		if( pde->bit.pdu_len > 0 ){
 			lseek(ifd, pde->bit.pdu_len, SEEK_CUR);
 		}
 		
-		DBGOUT("read ok\n");
-		BE_TO_LE_BIT(pde->bit);
+		//DBGOUT("read ok\n");
+		//BE_TO_LE_BIT(pde->bit);
 		
 		//insert to list 
 		insert_proper_pos(pde);
 		
 		pdng = rb_search_nugget( pde->bit.sector );
 		if( pdng == NULL ){
-			DBGOUT(" > %llu isn't in tree\n", pde->bit.sector);
+			//DBGOUT(" > %llu isn't in tree\n", pde->bit.sector);
 			pdng = (struct dio_nugget*)malloc(sizeof(struct dio_nugget));
 			if( pdng == NULL ){
 				perror("failed to allocate nugget memory");
@@ -151,14 +173,38 @@ int main(int argc, char** argv){
 	}
 
 	//test printing
-	DBGOUT("end parse.\nprint start\n");
+	//DBGOUT("end parse.\nprint start\n");
 	struct list_head* p = NULL;
+	struct dio_entity *_pde = list_entry(de_head.next->next, struct dio_entity, link);
+	__u64 start_time = _pde->bit.time;
+	i = 0;
 	__list_for_each(p, &(de_head)){
-		struct dio_entity* _pde = list_entry(p, struct dio_entity, link);
-		DBGOUT("time : %20llu, sector %20llu, action 0x%08x, pid %10u, cpu %d\n", 
-			_pde->bit.time, _pde->bit.sector, _pde->bit.action, _pde->bit.pid, _pde->bit.cpu);
+		struct dio_entity* pde = list_entry(p, struct dio_entity, link);
+		if(i < 10)
+		{
+			int act1 = pde->bit.action & 0xffff;
+			int act2 = (pde->bit.action >> 16) & 0xffff;
+
+			pde->bit.time -= start_time;
+			DBGOUT("========== bit[%d] ========== \n", i);
+			DBGOUT("sequence : %u \n", pde->bit.sequence);
+			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pde->bit.time), \
+						 (unsigned long)NANO_SECONDS(pde->bit.time));
+			DBGOUT("sector : %llu \n", pde->bit.sector);
+			DBGOUT("bytes : %u \n", pde->bit.bytes);
+			DBGOUT("action : %u \n", pde->bit.action);
+			DBGOUT("\tTA : %d \n", act1);
+			DBGOUT("\tTC : %d \n", act2);
+			DBGOUT("pid : %u \n", pde->bit.pid);
+			DBGOUT("device : %u \n", pde->bit.device);
+			DBGOUT("cpu : %u \n", pde->bit.cpu);
+			DBGOUT("error : %u \n", pde->bit.error);
+			DBGOUT("pdu_len : %u \n", pde->bit.pdu_len);
+			DBGOUT("\n");
+			i++;
+		}
 	}
-	DBGOUT("end printing\n");
+	//DBGOUT("end printing\n");
 
 	//clean all list entities
 	return 0;
