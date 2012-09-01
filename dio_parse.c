@@ -21,6 +21,14 @@
 #include "rbtree.h"
 #include "blktrace_api.h"
 
+/*	struct and defines	*/
+#define SECONDS(x)              ((unsigned long long)(x) / 1000000000)
+#define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
+#define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
+
+#define BLK_ACTION_STRING	"QMFGSRDCPUTIXBAad"
+#define GET_ACTION_CHAR(x)      (0<(x&0xffff) && (x&0xffff)<sizeof(BLK_ACTION_STRING))?BLK_ACTION_STRING[(x & 0xffff) - 1]:'?'
+
 /*--------------	struct and defines	------------------*/
 #define BE_TO_LE16(word) \
 	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
@@ -84,6 +92,15 @@ struct bit_entity{
 	struct blk_io_trace bit;
 };
 
+struct dio_nugget_path
+{
+	struct list_head link;
+
+	char states[MAX_ELEMENT_SIZE];
+	int count_nugget;
+	int total_time;
+	int* interval_time;
+};
 
 /*--------------	function interfaces	-----------------------*/
 /* function for bit list */
@@ -133,7 +150,7 @@ int main(int argc, char** argv){
 	struct bit_entity* pbiten = NULL;
 	struct dio_nugget* pdng = NULL;
 
-	int i;
+	int i = 0;
 	while(1){
 		pbiten = (struct bit_entity*)malloc(sizeof(struct bit_entity));
 		if( pbiten == NULL ){
@@ -150,43 +167,54 @@ int main(int argc, char** argv){
 			DBGOUT(">end read\n");
 			break;
 		}
-		
+
 		//BE_TO_LE_BIT(pbiten->bit);
 
-		DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
+		//DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
 		if( pbiten->bit.pdu_len > 0 ){
 			rdsz = read(ifd, pdubuf, pbiten->bit.pdu_len);
-			pdubuf[rdsz] = '\0';
-			DBGOUT(">pdu data : %s\n", pdubuf);
+			//pdubuf[rdsz] = '\0';
+			//DBGOUT(">pdu data : %s\n", pdubuf);
 			//lseek(ifd, pbiten->bit.pdu_len, SEEK_CUR);
 		}
 		
 		//insert into list order by time
 		insert_proper_pos(pbiten);
+#ifdef DEBUG
+		if(i < 5)
+		{
+			DBGOUT("========== bit[%d] ========== \n", i);
+			DBGOUT("sequence : %u \n", pbiten->bit.sequence);
+			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pbiten->bit.time), (unsigned long)NANO_SECONDS(pbiten->bit.time));
+			DBGOUT("sector : %llu \n", pbiten->bit.sector);
+			DBGOUT("bytes : %u \n", pbiten->bit.bytes);
+			DBGOUT("action : %u \n", pbiten->bit.action);
+			DBGOUT("pid : %u \n", pbiten->bit.pid);
+			DBGOUT("device : %u \n", pbiten->bit.device);
+			DBGOUT("cpu : %u \n", pbiten->bit.cpu);
+			DBGOUT("error : %u \n", pbiten->bit.error);
+			DBGOUT("pdu_len : %u \n", pbiten->bit.pdu_len);
+			DBGOUT("length of read : %d \n", rdsz);
+			DBGOUT("\n");
+		i++;
+		}
+#endif	
 	}
 
-	struct list_head* p= NULL;
-	__list_for_each(p, &biten_head){
-		struct bit_entity* pb = list_entry(p, struct bit_entity, link);
-
-		pdng = get_nugget_at(pb->bit.sector);	
+	struct bit_entity* p = NULL;
+	list_for_each_entry(p, &biten_head, link){
+		pdng = get_nugget_at(p->bit.sector);
 		if( pdng == NULL ){
-			DBGOUT(">failed to get nugget at sector %llu\n", pb->bit.sector);
+			DBGOUT(">failed to get nugget at sector %llu\n", p->bit.sector);
 			goto err;
 		}
-		handle_action(pb->bit.action, pdng);
+		DBGOUT("sequence : %d \n", p->bit.sequence);
+		DBGOUT("pdng->elemidx = %d \n", pdng->elemidx);
+		DBGOUT("p->bit.action = %d \n", p->bit.action);
+		//DBGOUT("p->bit.action & 0xffff = %d \n", p>bit.action & 0xffff);
+		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(p->bit.action);
+		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx]);
 	}
-
-	//test printing
-	DBGOUT("end parse.\nprint start\n");
-	p = NULL;
-	__list_for_each(p, &(biten_head)){
-		struct bit_entity* _pbiten = list_entry(p, struct bit_entity, link);
-		DBGOUT("time : %llu, sector %llu, action 0x%x, pid %d, cpu %d\n", 
-			_pbiten->bit.time, _pbiten->bit.sector, _pbiten->bit.action, 
-			_pbiten->bit.pid, _pbiten->bit.cpu);
-	}
-	DBGOUT("end printing\n");
 
 	//clean all list entities
 	return 0;
@@ -306,36 +334,65 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 	return pdng;
 }
 
-void handle_action(uint32_t act, struct dio_nugget* pdng){
-	switch( act ){
-	case BLK_TA_QUEUE:
-		pdng->states[pdng->elemidx++] = 'Q';
-		break;
-	case BLK_TA_BACKMERGE:
-		pdng->states[pdng->elemidx++] = 'M';
-		break;
-	case BLK_TA_FRONTMERGE:
-		pdng->states[pdng->elemidx++] = 'M';
-		break;
-	case BLK_TA_GETRQ:
-	case BLK_TA_SLEEPRQ:
-	case BLK_TA_REQUEUE:
-	case BLK_TA_ISSUE:
-	case BLK_TA_COMPLETE:
-	case BLK_TA_PLUG:
-	case BLK_TA_UNPLUG_IO:
-	case BLK_TA_UNPLUG_TIMER:
-	case BLK_TA_INSERT:
-	case BLK_TA_SPLIT:
-	case BLK_TA_BOUNCE:
-	case BLK_TA_REMAP:
-	case BLK_TA_ABORT:
-	case BLK_TA_DRV_DATA:
+struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char* states)
+{
+	struct dio_nugget_path* pdngpath;
 
-	case BLK_TN_PROCESS:
-	case BLK_TN_TIMESTAMP:
-	case BLK_TN_MESSAGE:
-	default:
-		break;
-	};
+	list_for_each_entry(pdngpath, &nugget_path_head, link)
+	{
+		if(strcmp(pdngpath->states, states) == 0)
+		{
+			return pdngpath;
+		}
+	}
+
+	return NULL;
+}
+
+void print_path_statistic(void)
+{
+	struct rb_node* node;
+
+	node = rb_first(&rben_root);
+	while((node = rb_next(node)) != NULL)
+	{
+		struct list_head* nugget_head;
+		struct dio_rbentity* prbentity;
+
+		prbentity = rb_entry(node, struct dio_rbentity, rblink);
+
+		struct dio_nugget* pdng;
+		list_for_each_entry(pdng, nugget_head, nglink)
+		{
+			struct list_head nugget_path_head;
+			struct dio_nugget_path* pnugget_path;
+			char* pstates;
+			uint64_t* ptimes;
+			int* pelemidx;
+			int i;
+
+			INIT_LIST_HEAD(&nugget_path_head);
+
+			pnugget_path = find_nugget_path(nugget_path_head, pstates);
+			if(pnugget_path == NULL)
+			{
+				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
+
+				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
+				list_add(&(pnugget_path->link), &nugget_path_head);
+
+				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
+			}
+
+			pnugget_path->count_nugget++;
+			for(i=0 ; i<pdng->elemidx ; i++)
+			{
+				if(i < pdng->elemidx-1)
+				{
+					pnugget_path->interval_time[i] = pdng->times[i+1] - pdng->times[i];
+				}
+				pnugget_path->total_time += pdng->times[i];
+			}
+		}
+	}
 }
