@@ -26,7 +26,7 @@
 #define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
 
-#define BLK_ACTION_STRING	"QBFSLRICPUUISBRAD"
+#define BLK_ACTION_STRING	"QMFGSRDCPUTIXBAad"
 #define GET_ACTION_CHAR(x)	BLK_ACTION_STRING[x & 0xffff]
 
 /*--------------	struct and defines	------------------*/
