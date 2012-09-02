@@ -92,6 +92,14 @@ struct bit_entity{
 	struct blk_io_trace bit;
 };
 
+struct dio_nugget_path
+{
+	struct list_head link;
+
+	char states[MAX_ELEMENT_SIZE];
+	int count_nugget;
+	int total_time;
+};
 
 /*--------------	function interfaces	-----------------------*/
 /* function for bit list */
@@ -320,4 +328,60 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 	list_add(&pdng->nglink, &prben->nghead);
 
 	return pdng;
+}
+
+struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char* states)
+{
+	struct dio_nugget_path* pdngpath;
+
+	list_for_each_entry(pdngpath, &nugget_path_head, link)
+	{
+		if(strcmp(pdngpath->states, states) == 0)
+		{
+			return pdngpath;
+		}
+	}
+
+	return NULL;
+}
+
+void print_path_statistic(void)
+{
+	struct rb_node* node;
+
+	node = rb_first(&rben_root);
+	while((node = rb_next(node)) != NULL)
+	{
+		struct list_head* nugget_head;
+		struct dio_rbentity* prbentity;
+
+		prbentity = rb_entry(node, struct dio_rbentity, rblink);
+
+		struct dio_nugget* pdng;
+		list_for_each_entry(pdng, nugget_head, nglink)
+		{
+			struct list_head nugget_path_head;
+			struct dio_nugget_path* pnugget_path;
+			char* pstates;
+			uint64_t* ptimes;
+			int* pelemidx;
+			int i;
+
+			INIT_LIST_HEAD(&nugget_path_head);
+
+			pnugget_path = find_nugget_path(nugget_path_head, pstates);
+			if(pnugget_path == NULL)
+			{
+				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
+				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
+				list_add(&(pnugget_path->link), &nugget_path_head);
+			}
+
+			pnugget_path->count_nugget++;
+			for(i=0 ; i<pdng->elemidx ; i++)
+			{
+				pnugget_path->total_time += pdng->times[i];
+			}
+		}
+	}
 }
