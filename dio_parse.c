@@ -169,11 +169,11 @@ int main(int argc, char** argv){
 
 		//BE_TO_LE_BIT(pbiten->bit);
 
-		DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
+		//DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
 		if( pbiten->bit.pdu_len > 0 ){
 			rdsz = read(ifd, pdubuf, pbiten->bit.pdu_len);
-			pdubuf[rdsz] = '\0';
-			DBGOUT(">pdu data : %s\n", pdubuf);
+			//pdubuf[rdsz] = '\0';
+			//DBGOUT(">pdu data : %s\n", pdubuf);
 			//lseek(ifd, pbiten->bit.pdu_len, SEEK_CUR);
 		}
 		
@@ -200,16 +200,19 @@ int main(int argc, char** argv){
 #endif	
 	}
 
-	struct list_head* p = NULL;
-	__list_for_each(p, &biten_head){
-		struct bit_entity* pb = list_entry(p, struct bit_entity, link);
-
-		pdng = get_nugget_at(pb->bit.sector);	
+	struct bit_entity* p = NULL;
+	list_for_each_entry(p, &biten_head, link){
+		pdng = get_nugget_at(p->bit.sector);
 		if( pdng == NULL ){
-			DBGOUT(">failed to get nugget at sector %llu\n", pb->bit.sector);
+			DBGOUT(">failed to get nugget at sector %llu\n", p->bit.sector);
 			goto err;
 		}
-		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(pb->bit.action);
+		DBGOUT("sequence : %d \n", p->bit.sequence);
+		DBGOUT("pdng->elemidx = %d \n", pdng->elemidx);
+		DBGOUT("p->bit.action = %d \n", p->bit.action);
+		//DBGOUT("p->bit.action & 0xffff = %d \n", p>bit.action & 0xffff);
+		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(p->bit.action);
+		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx]);
 	}
 
 	//clean all list entities
