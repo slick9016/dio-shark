@@ -27,7 +27,7 @@
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
 
 #define BLK_ACTION_STRING	"QMFGSRDCPUTIXBAad"
-#define GET_ACTION_CHAR(x)	BLK_ACTION_STRING[(x & 0xffff) - 1]
+#define GET_ACTION_CHAR(x)      (0<(x&0xffff) && (x&0xffff)<sizeof(BLK_ACTION_STRING))?BLK_ACTION_STRING[(x & 0xffff) - 1]:'?'
 
 /*--------------	struct and defines	------------------*/
 #define BE_TO_LE16(word) \
