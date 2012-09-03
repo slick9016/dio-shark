@@ -99,6 +99,7 @@ struct dio_nugget_path
 	char states[MAX_ELEMENT_SIZE];
 	int count_nugget;
 	int total_time;
+	int* interval_time;
 };
 
 /*--------------	function interfaces	-----------------------*/
@@ -376,13 +377,20 @@ void print_path_statistic(void)
 			if(pnugget_path == NULL)
 			{
 				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
+
 				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
 				list_add(&(pnugget_path->link), &nugget_path_head);
+
+				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
 			}
 
 			pnugget_path->count_nugget++;
 			for(i=0 ; i<pdng->elemidx ; i++)
 			{
+				if(i < pdng->elemidx-1)
+				{
+					pnugget_path->interval_time[i] = pdng->times[i+1] - pdng->times[i];
+				}
 				pnugget_path->total_time += pdng->times[i];
 			}
 		}
