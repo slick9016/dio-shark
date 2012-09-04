@@ -26,7 +26,7 @@
 #define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
 
-#define BLK_ACTION_STRING	"QmFGSRDCPUTIXBAad"
+#define BLK_ACTION_STRING		"QmFGSRDCPUTIXBAad"
 #define GET_ACTION_CHAR(x)      (0<(x&0xffff) && (x&0xffff)<sizeof(BLK_ACTION_STRING))?BLK_ACTION_STRING[(x & 0xffff) - 1]:'?'
 
 /*--------------	struct and defines	------------------*/
@@ -75,6 +75,7 @@ struct dio_nugget{
 
 	//real nugget data
 	int elemidx;	//element index. (elemidx-1) is count of nugget states
+	int category;
 	char states[MAX_ELEMENT_SIZE];	//action
 	uint64_t times[MAX_ELEMENT_SIZE];	//states[elemidx] is occured at times[elemidx]
 	char type[5];	//type of bit who was requested
@@ -98,6 +99,8 @@ struct dio_nugget_path
 
 	char states[MAX_ELEMENT_SIZE];
 	int count_nugget;
+	int count_read;
+	int count_write;
 	unsigned int total_time;
 	unsigned int average_time;
 	unsigned int max_time;
@@ -219,6 +222,7 @@ int main(int argc, char** argv){
 		DBGOUT("p->bit.action = %d \n", p->bit.action);
 		//DBGOUT("p->bit.action & 0xffff = %d \n", p>bit.action & 0xffff);
 		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(p->bit.action);
+		pdng->category = p->bit.action >> BLK_TC_SHIFT;
 		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx-1]);
 	}
 
@@ -388,9 +392,20 @@ void print_path_statistic(void)
 				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
 				memset(pnugget_path, 0, sizeof(struct dio_nugget_path));
 				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
+
 				list_add(&(pnugget_path->link), &nugget_path_head);
-				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
+//				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
 			}
+			switch(pdng->category)
+			{
+				case BLK_TC_READ:
+					pnugget_path->count_read++;
+					break;
+				case BLK_TC_WRITE:
+					pnugget_path->count_write++;
+					break;
+			}	
+
 			pnugget_path->count_nugget++;
 			nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
 			pnugget_path->total_time += nugget_time;
@@ -406,11 +421,11 @@ void print_path_statistic(void)
 		pnugget_path->average_time = pnugget_path->total_time / pnugget_path->count_nugget;
 	}while((node = rb_next(node)) != NULL);
 
-	printf("%20s %4s %12s %12s %12s \n", " ", "횟수", "평균수행시간", "최대수행시간", "최소수행시간");
+	printf("%20s %8s %8s %4s %12s %12s %12s \n", " ", "횟수", "읽기횟수", "쓰기횟수", "평균수행시간", "최대수행시간", "최소수행시간");
 	list_for_each_entry(pnugget_path, &nugget_path_head, link)
 	{
 
-		printf("%20s %4u %12u %12u %12u \n", pnugget_path->states, pnugget_path->count_nugget, 
+		printf("%20s %8s %8s %4u %12u %12u %12u \n", pnugget_path->states, pnugget_path->count_nugget, pnugget_path->count_read, pnugget_path->count_write
 							pnugget_path->average_time, pnugget_path->max_time, pnugget_path->min_time);
 	} 
 }
