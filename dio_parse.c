@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <errno.h>
 #include <signal.h>
@@ -21,7 +22,7 @@
 #include "rbtree.h"
 #include "blktrace_api.h"
 
-/*	struct and defines	*/
+/*--------------	struct and defines	------------------*/
 #define SECONDS(x)              ((unsigned long long)(x) / 1000000000)
 #define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
@@ -29,7 +30,7 @@
 #define BLK_ACTION_STRING	"QMFGSRDCPUTIXBAad"
 #define GET_ACTION_CHAR(x)      (0<(x&0xffff) && (x&0xffff)<sizeof(BLK_ACTION_STRING))?BLK_ACTION_STRING[(x & 0xffff) - 1]:'?'
 
-/*--------------	struct and defines	------------------*/
+
 #define BE_TO_LE16(word) \
 	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
 
@@ -67,9 +68,10 @@ struct dio_rbentity{
 // dio_nugget is a treated data of bit
 // it will be linked at dio_rbentity 's nghead
 #define MAX_ELEMENT_SIZE 20
-#define NG_BACKMERGE 1
-#define NG_FRONTMERGE 2
-#define NG_COMPLETE 4
+#define NG_ACTIVE	1
+#define NG_BACKMERGE	2
+#define NG_FRONTMERGE	3
+#define NG_COMPLETE	4
 struct dio_nugget{
 	struct list_head nglink;	//link of dio_nugget datatype
 
@@ -78,10 +80,10 @@ struct dio_nugget{
 	char states[MAX_ELEMENT_SIZE];	//action
 	uint64_t times[MAX_ELEMENT_SIZE];	//states[elemidx] is occured at times[elemidx]
 	char type[5];	//type of bit who was requested
+	int size;	//size of nugget
 	uint64_t sector;	//sector number of bit who was requested. is it really need?
-	struct dio_nugget* mlink;	//if it was merged, than mlink points the other nugget as 'mflag'
-	int mflag;	//BACKMERGE, FRONTMERGE
-	bool isend;	//if action is 'M' or 'C', than that nugget is ended
+	struct dio_nugget* mlink;	//if it was merged, than mlink points the other nugget
+	int ngflag;
 };
 
 // list node of blk_io_trace
@@ -111,17 +113,29 @@ static void insert_proper_pos(struct bit_entity* pbiten);
 //initialize dio_rbentity
 static void init_rbentity(struct dio_rbentity* prben);
 static struct dio_rbentity* rb_search_entity(uint64_t sector);
+static struct dio_rbentity* rb_search_end(uint64_t sec_t);
 static struct dio_rbentity* __rb_insert_entity(struct dio_rbentity* prben);
 static struct dio_rbentity* rb_insert_entity(struct dio_rbentity* prben);
 
-/* function for nugge */
+/* function for nugget */
 static void init_nugget(struct dio_nugget* pdng);
+static void copy_nugget(struct dio_nugget* destng, struct dio_nugget* srcng);
+static struct dio_nugget* FRONT_NUGGET(struct dio_rbentity* prben);
 
 // it return a valid nugget point even if inserted 'sector' doesn't existed in rbtree
 // if NULL value is returned, reason is a problem of inserting the new rbentity 
 // or memory allocating the new nugget 
 static struct dio_nugget* get_nugget_at(uint64_t sector);
 
+// create active nugget on rbtree
+// if there isn't rbentity of sector number 'sector', than it create rbentity automatically
+// and return the pointer of created nugget
+static struct dio_nugget* create_nugget_at(uint64_t sector);
+
+// delete active nugget from rbtree
+static void delete_nugget_at(uint64_t sector);
+
+static void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf);
 static void handle_action(uint32_t act, struct dio_nugget* pdng);
 
 /*--------------	global variables	-----------------------*/
@@ -152,7 +166,8 @@ int main(int argc, char** argv){
 
 	int i = 0;
 	while(1){
-		pbiten = (struct bit_entity*)malloc(sizeof(struct bit_entity));
+		if( pbiten == NULL )
+			pbiten = (struct bit_entity*)malloc(sizeof(struct bit_entity));
 		if( pbiten == NULL ){
 			perror("failed to allocate memory");
 			goto err;
@@ -172,23 +187,23 @@ int main(int argc, char** argv){
 
 		//DBGOUT(">pdu_len : %d\n", pbiten->bit.pdu_len);
 		if( pbiten->bit.pdu_len > 0 ){
-			rdsz = read(ifd, pdubuf, pbiten->bit.pdu_len);
+			//rdsz = read(ifd, pdubuf, pbiten->bit.pdu_len);
 			//pdubuf[rdsz] = '\0';
 			//DBGOUT(">pdu data : %s\n", pdubuf);
-			//lseek(ifd, pbiten->bit.pdu_len, SEEK_CUR);
+			lseek(ifd, pbiten->bit.pdu_len, SEEK_CUR);
 		}
 		
-		//insert into list order by time
-		insert_proper_pos(pbiten);
+		if( (pbiten->bit.action >> BLK_TC_SHIFT) == BLK_TC_NOTIFY )
+			continue;
+			
 #ifdef DEBUG
-		if(i < 5)
-		{
 			DBGOUT("========== bit[%d] ========== \n", i);
 			DBGOUT("sequence : %u \n", pbiten->bit.sequence);
 			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pbiten->bit.time), (unsigned long)NANO_SECONDS(pbiten->bit.time));
 			DBGOUT("sector : %llu \n", pbiten->bit.sector);
 			DBGOUT("bytes : %u \n", pbiten->bit.bytes);
-			DBGOUT("action : %u \n", pbiten->bit.action);
+			char c = GET_ACTION_CHAR(pbiten->bit.action);
+			DBGOUT("action : %x(%c) \n", pbiten->bit.action,c);
 			DBGOUT("pid : %u \n", pbiten->bit.pid);
 			DBGOUT("device : %u \n", pbiten->bit.device);
 			DBGOUT("cpu : %u \n", pbiten->bit.cpu);
@@ -196,24 +211,27 @@ int main(int argc, char** argv){
 			DBGOUT("pdu_len : %u \n", pbiten->bit.pdu_len);
 			DBGOUT("length of read : %d \n", rdsz);
 			DBGOUT("\n");
-		i++;
-		}
 #endif	
+		//insert into list order by time
+		insert_proper_pos(pbiten);
+		pbiten = NULL;
 	}
 
+	//build up the rbtree order by number of sector
 	struct bit_entity* p = NULL;
+	uint64_t recentsect = 0;
 	list_for_each_entry(p, &biten_head, link){
+		if( pdng->sector == 0 )
+			pdng->sector = recentsect;
+		else
+			recentsect = pdng->sector;
+
 		pdng = get_nugget_at(p->bit.sector);
 		if( pdng == NULL ){
 			DBGOUT(">failed to get nugget at sector %llu\n", p->bit.sector);
 			goto err;
 		}
-		DBGOUT("sequence : %d \n", p->bit.sequence);
-		DBGOUT("pdng->elemidx = %d \n", pdng->elemidx);
-		DBGOUT("p->bit.action = %d \n", p->bit.action);
-		//DBGOUT("p->bit.action & 0xffff = %d \n", p>bit.action & 0xffff);
-		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(p->bit.action);
-		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx]);
+		extract_nugget(&p->bit, pdng);
 	}
 
 	//clean all list entities
@@ -242,6 +260,7 @@ void insert_proper_pos(struct bit_entity* pbiten){
 }
 
 static void init_rbentity(struct dio_rbentity* prben){
+	memset(prben, 0, sizeof(struct dio_rbentity));
 	INIT_LIST_HEAD(&prben->nghead);
 	prben->sector = 0;
 }
@@ -260,6 +279,35 @@ static struct dio_rbentity* rb_search_entity(uint64_t sector){
 			return prben;
 	}
 	return NULL;
+}
+
+struct dio_rbentity* rb_search_end(uint64_t sec_t){
+	struct rb_node* p = rben_root.rb_node;
+	struct dio_rbentity* prben = NULL;
+	struct dio_nugget* actng = NULL;
+	uint64_t calcsect = 0;
+
+	while(p){
+		prben = rb_entry(p, struct dio_rbentity, rblink);
+		actng = FRONT_NUGGET(prben);
+		if( prben->sector != actng->sector ){
+			DBGOUT("prben->sector != actng->sector\n");
+			return NULL;
+		}
+		calcsect = actng->sector + actng->size/512;
+
+		if( sec_t < calcsect )
+			p = prben->rblink.rb_left;
+		else if( sec_t > calcsect )
+			p = prben->rblink.rb_right;
+		else
+			return prben;
+	}
+	return NULL;
+}
+
+struct dio_nugget* FRONT_NUGGET(struct dio_rbentity* prben){
+	return list_entry(prben->nghead.next, struct dio_nugget, nglink);
 }
 
 static struct dio_rbentity* __rb_insert_entity(struct dio_rbentity* prben){
@@ -297,6 +345,10 @@ void init_nugget(struct dio_nugget* pdng){
 	//pdng->elemidx = 0;
 }
 
+void copy_nugget(struct dio_nugget* destng, struct dio_nugget* srcng){
+	memcpy(destng, srcng, sizeof(struct dio_nugget));
+}
+
 struct dio_nugget* get_nugget_at(uint64_t sector){
 	struct dio_nugget* pdng = NULL;
 	struct dio_rbentity* prben = NULL;
@@ -304,6 +356,10 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 	prben = rb_search_entity(sector);
 	if( prben == NULL ){
 		prben = (struct dio_rbentity*)malloc(sizeof(struct dio_rbentity));
+		if( prben == NULL){
+			DBGOUT("failed to get memory\n");
+			return NULL;
+		}
 		init_rbentity(prben);
 		prben->sector = sector;
 		if( rb_insert_entity(prben) != NULL ){
@@ -315,11 +371,12 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 
 	//return the first item of nugget list
 	if( !list_empty(&prben->nghead) ){
-		pdng = list_entry(prben->nghead.next, struct dio_nugget, nglink);
-		if( !pdng->isend )
+		pdng = FRONT_NUGGET(prben);
+		if( pdng->ngflag != NG_ACTIVE )
 			return pdng;
 	}
 
+	//else if list is empty or first item is inactive
 	pdng = NULL;
 	pdng = (struct dio_nugget*)malloc(sizeof(struct dio_nugget));
 	if( pdng == NULL ){
@@ -332,6 +389,93 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 	list_add(&pdng->nglink, &prben->nghead);
 
 	return pdng;
+}
+
+struct dio_nugget* create_nugget_at(uint64_t sector){
+	struct dio_rbentity* rben = rb_search_entity(sector);
+	if( rben == NULL ){
+		rben = (struct dio_rbentity*)malloc(sizeof(struct dio_rbentity));
+		init_rbentity(rben);
+		rben->sector = sector;
+
+		rb_insert_entity(rben);
+	}
+
+	struct dio_nugget* newng = NULL;
+	newng = (struct dio_nugget*)malloc(sizeof(struct dio_nugget));
+	if( newng == NULL ){
+		perror("failed to allocate nugget memory");
+		return NULL;
+	}
+	init_nugget(newng);
+	newng->sector = sector;
+	list_add(&newng->nglink, &rben->nghead);
+
+	return newng;
+}
+
+void delete_nugget_at(uint64_t sector){
+	struct dio_rbentity* prben = rb_search_entity(sector);
+	if( prben == NULL )
+		return;
+	
+	if( list_empty(&prben->nghead) )
+		return;
+
+	struct dio_nugget* del = FRONT_NUGGET(prben);
+	list_del(prben->nghead.next);
+	free(del);
+}
+
+void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf){
+	pdngbuf->times[pdngbuf->elemidx] = pbit->time;
+	if( pdngbuf->elemidx == 0 )
+		pdngbuf->size = pbit->bytes;
+
+	handle_action(pbit->action, pdngbuf);
+	pdngbuf->elemidx++;
+}
+
+void handle_action(uint32_t act, struct dio_nugget* pdng){
+	struct dio_nugget* ptmpng = NULL;
+	struct dio_nugget* newng = NULL;
+	struct dio_rbentity* prben = NULL;
+
+	char actc = GET_ACTION_CHAR(act);
+	pdng->states[pdng->elemidx] = actc;
+
+	//back merged
+	if( actc == 'M' ){
+		prben = rb_search_end(pdng->sector);
+		if( prben == NULL ){
+			DBGOUT("Failed to search nugget when back merging\n");
+			return;
+		}
+		ptmpng = FRONT_NUGGET(prben);
+		
+		pdng->ngflag = NG_BACKMERGE;
+		pdng->mlink = ptmpng;
+		ptmpng->size += pdng->size;
+	}
+	//front merged
+	else if( actc == 'F' ){	
+		newng = create_nugget_at(pdng->sector);
+		if( newng == NULL ){
+			DBGOUT("Failed to create nugget\n");
+			return;
+		}
+		prben = rb_search_entity(pdng->sector + pdng->size);
+		if( prben == NULL ){
+			DBGOUT("Failed to search nugget when front merging\n");
+			return;
+		}
+		ptmpng = FRONT_NUGGET(prben);
+		copy_nugget(newng, ptmpng);
+
+		pdng->ngflag = NG_FRONTMERGE;
+		pdng->mlink = ptmpng;
+		delete_nugget_at(pdng->sector + pdng->size);
+	}
 }
 
 struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char* states)
