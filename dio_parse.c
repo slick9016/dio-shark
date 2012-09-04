@@ -443,7 +443,7 @@ void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf){
 		pdngbuf->size = pbit->bytes;
 
 	handle_action(pbit->action, pdngbuf);
-	pdng->category = p->bit.action >> BLK_TC_SHIFT;
+	pdngbuf->category = pbit->action >> BLK_TC_SHIFT;
 	pdngbuf->elemidx++;
 }
 
