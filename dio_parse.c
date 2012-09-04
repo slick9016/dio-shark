@@ -98,7 +98,10 @@ struct dio_nugget_path
 
 	char states[MAX_ELEMENT_SIZE];
 	int count_nugget;
-	int total_time;
+	unsigned int total_time;
+	unsigned int average_time;
+	unsigned int max_time;
+	unsigned int min_time;
 	int* interval_time;
 };
 
@@ -215,6 +218,8 @@ int main(int argc, char** argv){
 		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(p->bit.action);
 		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx-1]);
 	}
+
+	print_path_statistic();
 
 	//clean all list entities
 	return 0;
@@ -352,6 +357,7 @@ struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char
 void print_path_statistic(void)
 {
 	struct rb_node* node;
+	struct dio_nugget_path* pnugget_path;
 
 	node = rb_first(&rben_root);
 	while((node = rb_next(node)) != NULL)
@@ -370,6 +376,7 @@ void print_path_statistic(void)
 			uint64_t* ptimes;
 			int* pelemidx;
 			int i;
+			int nugget_time;
 
 			INIT_LIST_HEAD(&nugget_path_head);
 
@@ -377,6 +384,7 @@ void print_path_statistic(void)
 			if(pnugget_path == NULL)
 			{
 				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
+				memset(pnugget_path, 0, sizeof(struct dio_nugget_path));
 
 				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
 				list_add(&(pnugget_path->link), &nugget_path_head);
@@ -385,14 +393,26 @@ void print_path_statistic(void)
 			}
 
 			pnugget_path->count_nugget++;
-			for(i=0 ; i<pdng->elemidx ; i++)
+			nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
+			pnugget_path->total_time += nugget_time;
+			if(pnugget_path->max_time < nugget_time)
 			{
-				if(i < pdng->elemidx-1)
-				{
-					pnugget_path->interval_time[i] = pdng->times[i+1] - pdng->times[i];
-				}
-				pnugget_path->total_time += pdng->times[i];
+				pnugget_path->max_time = nugget_time;
 			}
+			if(pnugget_path->min_time > nugget_time)
+			{
+				pnugget_path->min_time = nugget_time;
+			}
+
 		}
+		pnugget_path->average_time = pnugget_path->total_time / pnugget_path->count_nugget;
 	}
+
+	printf("%20s %4s %12s %12s %12s \n", " ", "횟수", "평균수행시간", "최대수행시간", "최소수행시간");
+	list_for_each_entry(pnugget_path, &nugget_path_head, link)
+	{
+
+		printf("%20s %4s %12s %12s %12s \n", pnugget_path->states, pnugget_path->count_nugget, 
+											 , pnugget_path->average_time, pnugget_path->max_time, pnugget_path->min_time);
+	} 
 }
