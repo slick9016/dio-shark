@@ -213,7 +213,7 @@ int main(int argc, char** argv){
 		DBGOUT("p->bit.action = %d \n", p->bit.action);
 		//DBGOUT("p->bit.action & 0xffff = %d \n", p>bit.action & 0xffff);
 		pdng->states[pdng->elemidx++] = GET_ACTION_CHAR(p->bit.action);
-		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx]);
+		DBGOUT("pdng->states[pdng->elemidx] = %c \n", pdng->states[pdng->elemidx-1]);
 	}
 
 	//clean all list entities
