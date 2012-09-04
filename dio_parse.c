@@ -67,7 +67,7 @@ struct dio_rbentity{
 
 // dio_nugget is a treated data of bit
 // it will be linked at dio_rbentity 's nghead
-#define MAX_ELEMENT_SIZE 20
+#define MAX_ELEMENT_SIZE 50
 #define NG_ACTIVE	1
 #define NG_BACKMERGE	2
 #define NG_FRONTMERGE	3
@@ -166,11 +166,12 @@ int main(int argc, char** argv){
 
 	int i = 0;
 	while(1){
-		if( pbiten == NULL )
-			pbiten = (struct bit_entity*)malloc(sizeof(struct bit_entity));
 		if( pbiten == NULL ){
-			perror("failed to allocate memory");
-			goto err;
+			pbiten = (struct bit_entity*)malloc(sizeof(struct bit_entity));
+			if( pbiten == NULL ){
+				perror("failed to allocate memory");
+				goto err;
+			}
 		}
 
 		rdsz = read(ifd, &(pbiten->bit), sizeof(struct blk_io_trace));
@@ -197,7 +198,7 @@ int main(int argc, char** argv){
 			continue;
 			
 #ifdef DEBUG
-			DBGOUT("========== bit[%d] ========== \n", i);
+			DBGOUT("============================ \n");
 			DBGOUT("sequence : %u \n", pbiten->bit.sequence);
 			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pbiten->bit.time), (unsigned long)NANO_SECONDS(pbiten->bit.time));
 			DBGOUT("sector : %llu \n", pbiten->bit.sector);
@@ -221,12 +222,13 @@ int main(int argc, char** argv){
 	struct bit_entity* p = NULL;
 	uint64_t recentsect = 0;
 	list_for_each_entry(p, &biten_head, link){
-		if( pdng->sector == 0 )
-			pdng->sector = recentsect;
-		else
-			recentsect = pdng->sector;
-
+#if 0
+		if( p->bit.sector != 0 )
+			recentsect = p->bit.sector;
+#endif
+		
 		pdng = get_nugget_at(p->bit.sector);
+
 		if( pdng == NULL ){
 			DBGOUT(">failed to get nugget at sector %llu\n", p->bit.sector);
 			goto err;
@@ -307,6 +309,8 @@ struct dio_rbentity* rb_search_end(uint64_t sec_t){
 }
 
 struct dio_nugget* FRONT_NUGGET(struct dio_rbentity* prben){
+	if( list_empty(&prben->nghead) )
+		DBGOUT(">>>>>>>>>>>>>>>> list empty\n");
 	return list_entry(prben->nghead.next, struct dio_nugget, nglink);
 }
 
@@ -386,6 +390,7 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 
 	init_nugget(pdng);
 	pdng->sector = sector;
+	pdng->ngflag = NG_ACTIVE;
 	list_add(&pdng->nglink, &prben->nghead);
 
 	return pdng;
@@ -395,6 +400,10 @@ struct dio_nugget* create_nugget_at(uint64_t sector){
 	struct dio_rbentity* rben = rb_search_entity(sector);
 	if( rben == NULL ){
 		rben = (struct dio_rbentity*)malloc(sizeof(struct dio_rbentity));
+		if( rben == NULL ){
+			perror("failed to allocate rbentity memory");
+			return NULL;
+		}
 		init_rbentity(rben);
 		rben->sector = sector;
 
@@ -443,9 +452,12 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 
 	char actc = GET_ACTION_CHAR(act);
 	pdng->states[pdng->elemidx] = actc;
+	DBGOUT("action %x(%c), sector %"PRIx64", size %d\n", act, actc, pdng->sector, pdng->size);
+	
 
-	//back merged
-	if( actc == 'M' ){
+	switch(act){
+	case 'M':
+		//back merged
 		prben = rb_search_end(pdng->sector);
 		if( prben == NULL ){
 			DBGOUT("Failed to search nugget when back merging\n");
@@ -456,9 +468,10 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 		pdng->ngflag = NG_BACKMERGE;
 		pdng->mlink = ptmpng;
 		ptmpng->size += pdng->size;
-	}
-	//front merged
-	else if( actc == 'F' ){	
+		break;
+
+	case 'F':
+		//front merged
 		newng = create_nugget_at(pdng->sector);
 		if( newng == NULL ){
 			DBGOUT("Failed to create nugget\n");
@@ -475,7 +488,11 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 		pdng->ngflag = NG_FRONTMERGE;
 		pdng->mlink = ptmpng;
 		delete_nugget_at(pdng->sector + pdng->size);
-	}
+		break;
+	case 'C':
+		pdng->ngflag = NG_COMPLETE;
+		break;
+	};
 }
 
 struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char* states)
