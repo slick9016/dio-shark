@@ -554,6 +554,7 @@ void print_path_statistic(void)
 			{
 				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
 				memset(pnugget_path, 0, sizeof(struct dio_nugget_path));
+				pnugget_path->min_time = -1;
 				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
 
 				list_add(&(pnugget_path->link), &nugget_path_head);
