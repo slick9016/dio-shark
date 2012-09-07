@@ -588,6 +588,11 @@ void print_path_statistic(void)
 	list_for_each_entry(pnugget_path, &nugget_path_head, link)
 	{
 
-		printf("%20s %8d %8d %4u %12u %12u %12u \n", pnugget_path->states, pnugget_path->count_nugget, pnugget_path->count_read, pnugget_path->count_write, pnugget_path->average_time, pnugget_path->max_time, pnugget_path->min_time);
+		printf("%20s %4d %8d %8d %2llu:%.9llu %2llu:%.9llu %2llu:%.9llu \n", pnugget_path->states, pnugget_path->count_nugget,
+			pnugget_path->count_read, pnugget_path->count_write,
+			SECONDS(pnugget_path->average_time), NANO_SECONDS(pnugget_path->average_time),
+			SECONDS(pnugget_path->max_time), NANO_SECONDS(pnugget_path->max_time),
+			SECONDS(pnugget_path->min_time), NANO_SECONDS(pnugget_path->min_time)
+		);
 	} 
 }
