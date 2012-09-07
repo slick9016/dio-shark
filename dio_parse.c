@@ -556,15 +556,14 @@ void print_path_statistic(void)
 				list_add(&(pnugget_path->link), &nugget_path_head);
 //				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
 			}
-			switch(pdng->category)
+			if(pdng->category & BLK_TC_READ)
 			{
-				case BLK_TC_READ:
-					pnugget_path->count_read++;
-					break;
-				case BLK_TC_WRITE:
-					pnugget_path->count_write++;
-					break;
-			}	
+				pnugget_path->count_read++;
+			}
+			if(pdng->category & BLK_TC_WRITE)
+			{
+				pnugget_path->count_write++;
+			}
 
 			pnugget_path->count_nugget++;
 			nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
