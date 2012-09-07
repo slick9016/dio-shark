@@ -509,6 +509,33 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 	};
 }
 
+int instr(const char* str1, const char* str2)
+{
+        int i, j;
+
+        i=0;
+        while(str1[i] != '\0')
+        {
+                j=0;
+                while(str2[j] != '\0')
+                {
+                        if(str1[i+j] != str2[j])
+                        {
+                                break;
+                        }
+                        j++;
+                }
+                if(str2[j] == '\0')
+                {
+                        return i+1;
+                }
+                i++;
+        }
+
+        return 0;
+}
+
+
 struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states)
 {
 	struct dio_nugget_path* pdngpath;
@@ -587,6 +614,10 @@ void print_path_statistic(void)
 	printf("%20s %8s %8s %4s %12s %12s %12s \n", " ", "횟수", "읽기횟수", "쓰기횟수", "평균수행시간", "최대수행시간", "최소수행시간");
 	list_for_each_entry(pnugget_path, &nugget_path_head, link)
 	{
+		if(instr(pnugget_path->states, "P") | instr(pnugget_path->states, "U") | instr(pnugget_path->states, "?")
+		{
+			continue;
+		}
 
 		printf("%20s %4d %8d %8d %2llu:%.9llu %2llu:%.9llu %2llu:%.9llu \n", pnugget_path->states, pnugget_path->count_nugget,
 			pnugget_path->count_read, pnugget_path->count_write,
