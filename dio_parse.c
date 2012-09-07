@@ -125,7 +125,7 @@ static struct dio_rbentity* rb_insert_entity(struct dio_rbentity* prben);
 /* function for nugget */
 static void init_nugget(struct dio_nugget* pdng);
 static void copy_nugget(struct dio_nugget* destng, struct dio_nugget* srcng);
-static struct dio_nugget* FRONT_NUGGET(struct dio_rbentity* prben);
+static struct dio_nugget* FRONT_NUGGET(struct list_head* png_head);
 
 // it return a valid nugget point even if inserted 'sector' doesn't existed in rbtree
 // if NULL value is returned, reason is a problem of inserting the new rbentity 
@@ -301,7 +301,7 @@ struct dio_rbentity* rb_search_end(uint64_t sec_t){
 
 	while(p){
 		prben = rb_entry(p, struct dio_rbentity, rblink);
-		actng = FRONT_NUGGET(prben);
+		actng = FRONT_NUGGET(&prben->nghead);
 		if( prben->sector != actng->sector ){
 			DBGOUT("prben->sector != actng->sector\n");
 			return NULL;
@@ -318,10 +318,11 @@ struct dio_rbentity* rb_search_end(uint64_t sec_t){
 	return NULL;
 }
 
-struct dio_nugget* FRONT_NUGGET(struct dio_rbentity* prben){
-	if( list_empty(&prben->nghead) )
+struct dio_nugget* FRONT_NUGGET(struct list_head* png_head){
+	if( list_empty(png_head) )
 		DBGOUT(">>>>>>>>>>>>>>>> list empty\n");
-	return list_entry(prben->nghead.next, struct dio_nugget, nglink);
+
+	return list_entry(png_head->next, struct dio_nugget, nglink);
 }
 
 static struct dio_rbentity* __rb_insert_entity(struct dio_rbentity* prben){
@@ -385,9 +386,10 @@ struct dio_nugget* get_nugget_at(uint64_t sector){
 
 	//return the first item of nugget list
 	if( !list_empty(&prben->nghead) ){
-		pdng = FRONT_NUGGET(prben);
-		if( pdng->ngflag != NG_ACTIVE )
+		pdng = FRONT_NUGGET(&prben->nghead);
+		if( pdng->ngflag == NG_ACTIVE ){
 			return pdng;
+		}
 	}
 
 	//else if list is empty or first item is inactive
@@ -428,6 +430,7 @@ struct dio_nugget* create_nugget_at(uint64_t sector){
 	}
 	init_nugget(newng);
 	newng->sector = sector;
+	newng->ngflag = NG_ACTIVE;
 	list_add(&newng->nglink, &rben->nghead);
 
 	return newng;
@@ -441,7 +444,7 @@ void delete_nugget_at(uint64_t sector){
 	if( list_empty(&prben->nghead) )
 		return;
 
-	struct dio_nugget* del = FRONT_NUGGET(prben);
+	struct dio_nugget* del = FRONT_NUGGET(&prben->nghead);
 	list_del(prben->nghead.next);
 	free(del);
 }
@@ -463,7 +466,7 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 
 	char actc = GET_ACTION_CHAR(act);
 	pdng->states[pdng->elemidx] = actc;
-	DBGOUT("action %x(%c), sector %"PRIx64", size %d\n", act, actc, pdng->sector, pdng->size);
+	DBGOUT("action %x(%c), sector %"PRIu64", size %d\n", act, actc, pdng->sector, pdng->size);
 	
 
 	switch(act){
@@ -474,7 +477,7 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 			DBGOUT("Failed to search nugget when back merging\n");
 			return;
 		}
-		ptmpng = FRONT_NUGGET(prben);
+		ptmpng = FRONT_NUGGET(&prben->nghead);
 		
 		pdng->ngflag = NG_BACKMERGE;
 		pdng->mlink = ptmpng;
@@ -493,7 +496,7 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 			DBGOUT("Failed to search nugget when front merging\n");
 			return;
 		}
-		ptmpng = FRONT_NUGGET(prben);
+		ptmpng = FRONT_NUGGET(&prben->nghead);
 		copy_nugget(newng, ptmpng);
 
 		pdng->ngflag = NG_FRONTMERGE;
