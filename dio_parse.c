@@ -190,10 +190,10 @@ struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, cha
 static char respath[MAX_FILEPATH_LEN];	//result file path
 static int print_type;
 static FILE *output;
-static __u64 time_start;		/* in nanoseconds */
-static __u64 time_end;
-static __u64 sector_start;
-static __u64 sector_end;
+static uint64_t time_start;		/* in nanoseconds */
+static uint64_t time_end;
+static uint64_t sector_start;
+static uint64_t sector_end;
 
 static struct rb_root rben_root;	//root of rbentity tree
 static struct list_head biten_head;
@@ -331,16 +331,16 @@ int main(int argc, char** argv){
 	}
 
 	if(print_type == PRINT_TYPE_TIME) {
-		print_time();
+		add_statistic_function(NULL, NULL, NULL, print_time, NULL);
 	} else if(print_type == PRINT_TYPE_SECTOR) {
-		print_sector();
+		add_statistic_function(NULL, NULL, NULL, print_sector, NULL);
 	}
 
 	if(output!=stdout){
 		fclose(output);
 	}
 
-	print_path_statistic();
+	//print_path_statistic();
 
 	//clean all list entities
 	return 0;
@@ -380,15 +380,15 @@ bool parse_args(int argc, char** argv){
                 break;
 			case 't':
 				p = strtok(optarg,",");
-				time_start = atoll(p);
+				time_start = (uint64_t)atoi(p) * 1000000000;
 				p = strtok(NULL,",");
-				time_end = atoll(p);
+				time_end = (uint64_t)atoi(p) * 1000000000;
 				break;
 			case 's':
 				p = strtok(optarg,",");
-				sector_start = atoll(p);
+				sector_start = (uint64_t)atoll(p);
 				p = strtok(NULL,",");
-				sector_end = atoll(p);
+				sector_end = (uint64_t)atoll(p);
 				break;
         };
     }
@@ -673,8 +673,10 @@ void statistic_rb_traveling(){
 	int i=0, cnt=0;
 
 	//init all statistic functions
-	for(i=0; i<stat_fn_cnt; i++)
-		stat_init_fns[i]();
+	for(i=0; i<stat_fn_cnt; i++){
+		if( stat_init_fns[i] != NULL )
+			stat_init_fns[i]();
+	}
 	
 	node = rb_first(&rben_root);
 	do{
@@ -683,23 +685,31 @@ void statistic_rb_traveling(){
 
 		struct dio_nugget* pdng = NULL;
 		list_for_each_entry(pdng, &prben->nghead, nglink){
-			for(i=0; i<stat_fn_cnt; i++)
-				stat_trv_fns[i](pdng);
+			for(i=0; i<stat_fn_cnt; i++){
+				if( stat_trv_fns[i] != NULL )
+					stat_trv_fns[i](pdng);	
+			}
 			cnt++;
 		}
 	}while((node = rb_next(node)) != NULL);
 
 	//process data
-	for(i=0; i<stat_fn_cnt; i++)
-		stat_proc_fns[i](cnt);
+	for(i=0; i<stat_fn_cnt; i++){
+		if( stat_proc_fns[i] != NULL )
+			stat_proc_fns[i](cnt);
+	}
 
 	//print statistic
-	for(i=0; i<stat_fn_cnt; i++)
-		stat_prt_fns[i]();
+	for(i=0; i<stat_fn_cnt; i++){
+		if( stat_prt_fns[i] != NULL )
+			stat_prt_fns[i]();
+	}
 
 	//clear all statistic functions
-	for(i=0; i<stat_fn_cnt; i++)
-		stat_clr_fns[i]();
+	for(i=0; i<stat_fn_cnt; i++){
+		if( stat_clr_fns[i] != NULL )
+			stat_clr_fns[i]();
+	}
 }
 
 //------------------- path statistics ------------------------------//
@@ -755,13 +765,11 @@ void print_time() {
 		if( (time_start == 0 && time_end ==0) || 
 			(time_start > p->bit.time || time_end < p->bit.time)) continue;
 
-		fprintf(output,"%u ",p->bit.sequence);
 		fprintf(output,"%5d.%09lu ", (int)SECONDS(p->bit.time), (unsigned long)NANO_SECONDS(p->bit.time));
 		fprintf(output,"%llu ",p->bit.sector);
 		fprintf(output,"%u ",p->bit.pid);
-		fprintf(output,"%u\n",p->bit.bytes);
+		fprintf(output,"%u\n",p->bit.bytes/8);
 	}
-	
 }
 
 void print_sector() {
@@ -778,19 +786,21 @@ void print_sector() {
 		prbentity = rb_entry(node, struct dio_rbentity, rblink);
 
 		struct dio_nugget* pdng;
+		uint64_t tmpt = 0;
 
 		list_for_each_entry(pdng, &(prbentity->nghead), nglink) {
 		
 			if( (sector_start == 0 && sector_end ==0) || 
 				(sector_start > pdng->sector || sector_end < pdng->sector)) continue;
 			
+			tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
 			fprintf(output,"%"PRIu64" \n",pdng->sector);
+			fprintf(output,"%5d.%09lu ",(int)SECONDS(tmpt), (unsigned long)NANO_SECONDS(tmpt));
+			fprintf(output,"%u ", pdng->pid);
+			fprintf(output,"%d\n", pdng->size);
 
 		}
-		
-
 	}
-	
 }
 
 void init_path_statistic()
