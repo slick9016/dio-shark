@@ -79,9 +79,9 @@ struct dio_nugget{
 	int category;
 	char states[MAX_ELEMENT_SIZE];	//action
 	uint64_t times[MAX_ELEMENT_SIZE];	//states[elemidx] is occured at times[elemidx]
-	char type[5];	//type of bit who was requested
 	int size;	//size of nugget
 	uint64_t sector;	//sector number of bit who was requested. is it really need?
+	uint32_t pid;
 	struct dio_nugget* mlink;	//if it was merged, than mlink points the other nugget
 	int ngflag;
 };
@@ -485,11 +485,13 @@ void delete_nugget_at(uint64_t sector){
 
 void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf){
 	pdngbuf->times[pdngbuf->elemidx] = pbit->time;
-	if( pdngbuf->elemidx == 0 )
+	if( pdngbuf->elemidx == 0 ){
 		pdngbuf->size = pbit->bytes;
+		pdngbuf->pid = pbit->pid;
+		pdngbuf->category = pbit->action >> BLK_TC_SHIFT;
+	}
 
 	handle_action(pbit->action, pdngbuf);
-	pdngbuf->category = pbit->action >> BLK_TC_SHIFT;
 	pdngbuf->elemidx++;
 }
 
@@ -766,4 +768,141 @@ void process_section_statistic(int ng_cnt){
 }
 
 void clear_section_statistic(){
+}
+
+
+//---------------------------------------- pid statistic -------------------------------------------------//
+//global variables (and data structure) for pid statistic
+struct pid_stat_data{
+	struct rb_node link;
+
+	uint32_t pid;
+	uint64_t r_mint, r_maxt, r_tott, r_avgt;	//read min time, read max time, reat total time
+	uint64_t w_mint, w_maxt, w_tott, w_avgt;	//write min time, write max time, write total time
+	int r_cnt, w_cnt;	//count of occur
+};
+
+static struct rb_root psd_root = RB_ROOT;	//pid stat data root
+
+//function for handling data structure for pid statistic
+static struct pid_stat_data* rb_search_psd(uint32_t pid){
+	struct rb_node* n = psd_root.rb_node;
+	struct pid_stat_data* ppsd = NULL;
+	
+	while(n){
+		ppsd = rb_entry(n, struct pid_stat_data, link);
+
+		if( pid < ppsd->pid )
+			n = n->rb_left;
+		else if( pid > ppsd->pid )
+			n = n->rb_right;
+		else 
+			return ppsd;
+	}
+	return NULL;
+}
+
+static struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd){
+	struct pid_stat_data* ret;
+	struct rb_node** p = &(psd_root.rb_node);
+	struct rb_node* parent = NULL;
+	
+	while(*p){
+		parent = *p;
+		ret = rb_entry(parent, struct pid_stat_data, link);
+
+		if( newpsd->pid < ret->pid )
+			p = &(*p)->rb_left;
+		else if( newpsd->pid > ret->pid )
+			p = &(*p)->rb_right;
+		else
+			return ret;
+	}
+
+	rb_link_node(&newpsd->link, parent, p);
+	return NULL;
+}
+
+static struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd){
+	struct pid_stat_data* ret = NULL;
+	if( (ret = __rb_insert_psd(newpsd) ) )
+		return ret;
+	rb_insert_color(&newpsd->link, &psd_root);
+	return ret;
+}
+
+void init_pid_statistic(){
+}
+
+void travel_pid_statistic(struct dio_nugget* pdng){
+	struct pid_stat_data* ppsd = rb_search_psd(pdng->pid);
+	if( ppsd == NULL ){
+		ppsd = (struct pid_stat_data*)malloc(sizeof(struct pid_stat_data));
+		ppsd->pid = pdng->pid;
+		ppsd->r_mint = ppsd->w_mint = (uint64_t)(-1);
+		ppsd->r_maxt = ppsd->w_maxt = 0;
+		ppsd->r_tott = ppsd->w_tott = 0;
+		ppsd->r_avgt = ppsd->w_avgt = 0;
+		ppsd->r_cnt = ppsd->w_cnt = 0;
+		
+		rb_insert_psd(ppsd);
+	}
+	
+	uint64_t tmpt = 0;
+	if( pdng->category & BLK_TC_READ ){
+		tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
+		if( ppsd->r_mint > tmpt )
+			ppsd->r_mint = tmpt;
+		else if( ppsd->r_maxt < tmpt )
+			ppsd->r_maxt = tmpt;
+		ppsd->r_tott += tmpt;
+		ppsd->r_cnt ++;
+	}
+	else if( pdng->category & BLK_TC_WRITE ){
+		tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
+		if( ppsd->w_mint > tmpt )
+			ppsd->w_mint = tmpt;
+		else if( ppsd->w_maxt < tmpt )
+			ppsd->w_maxt = tmpt;
+		ppsd->w_tott = tmpt;
+		ppsd->w_cnt ++;
+	}
+}
+
+void process_pid_statistic(int ng_cnt){
+	struct rb_node* node = NULL;
+	node = rb_first(&psd_root);
+	do{
+		struct pid_stat_data* ppsd = NULL;
+		ppsd = rb_entry(node, struct pid_stat_data, link);
+		
+		ppsd->r_avgt = ppsd->r_tott / ppsd->r_cnt;
+		ppsd->w_avgt = ppsd->w_tott / ppsd->w_cnt;
+	}while( (node = rb_next(node)) != NULL );
+}
+
+void print_pid_statistic(){
+	struct rb_node* node = NULL;
+	node = rb_first(&psd_root);
+	do{
+		struct pid_stat_data* ppsd = NULL;
+		ppsd = rb_entry(node, struct pid_stat_data, link);
+
+		//print data
+	}while( (node = rb_next(node)) != NULL );
+}
+
+static void __clear_pid_stat(struct rb_node* p){
+	if( p->rb_left != NULL )
+		__clear_pid_stat(p->rb_left);
+	if( p->rb_right != NULL )
+		__clear_pid_stat(p->rb_right);
+	
+	struct pid_stat_data* psd = rb_entry(p, struct pid_stat_data, link);
+	free(psd);
+}
+
+void clear_pid_statistic(){
+	struct rb_node* parent = psd_root.rb_node;
+	__clear_pid_stat(parent);
 }
