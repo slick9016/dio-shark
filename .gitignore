@@ -1,2 +1,6 @@
 *.o
-dio-shark
+*.swp
+dioshark
+dioparse
+dioshark.output
+tags

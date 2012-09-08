@@ -1,10 +1,23 @@
-OBJS=dio-shark.o
+TARGET=dioshark dioparse
+SHARK_OBJ=dio_shark.o
+PARSE_OBJ=dio_parse.o rbtree.o
 
-all : $(OBJS)
-	gcc -o dio-shark $(OBJS) -lpthread
+ifeq ($(RELEASE), 1)
+CFLAGS= -O2
+else
+CFLAGS=-D DEBUG -g -O0
+endif
+
+all : $(TARGET)
+
+dioshark: $(SHARK_OBJ)
+	gcc -o $@ $< -pthread
+
+dioparse: $(PARSE_OBJ)
+	gcc -o $@ $^
 
 %.o : %.c
-	gcc -c $<
+	gcc $(CFLAGS) -c $<
 
 clean : 
-	rm -f $(OBJS) dio-shark
+	rm -f $(SHARK_OBJ) $(PARSE_OBJ) $(TARGET)
