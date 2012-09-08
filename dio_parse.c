@@ -142,10 +142,8 @@ typedef void(*statistic_clear_func)(void);
 #define MAX_STATISTIC_FUNCTION 10
 
 /*--------------	function interfaces	-----------------------*/
-/* function for option and print*/
+/* function for option handling */
 bool parse_args(int argc, char** argv);
-void print_time();
-void print_sector();
 
 /* function for bit list */
 // insert bit_entity data into rbiten_head order by time
@@ -193,6 +191,10 @@ static void statistic_rb_traveling();
 // statistic for each list entity
 static void statistic_list_for_each();
 
+// print functions
+void print_time();
+void print_sector();
+
 // path statistic functions
 int instr(const char* str1, const char* str2);
 struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states);
@@ -209,6 +211,29 @@ void travel_cpu_statistic(struct dio_nugget* pdng);
 void process_cpu_statistic(int ng_cnt);
 void print_cpu_statistic(void);
 void clear_cpu_statistic(void);
+
+// pid statistic functions
+//global variables (and data structure) for pid statistic
+struct pid_stat_data{
+	struct rb_node link;
+
+	uint32_t pid;
+	uint64_t r_mint, r_maxt, r_tott, r_avgt;	//read min time, read max time, reat total time
+	uint64_t w_mint, w_maxt, w_tott, w_avgt;	//write min time, write max time, write total time
+	int r_cnt, w_cnt;	//count of occur
+};
+static struct rb_root psd_root = RB_ROOT;	//pid stat data root
+
+//function for handling data structure for pid statistic
+static struct pid_stat_data* rb_search_psd(uint32_t pid);
+static struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd);
+static struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd);
+void init_pid_statistic();
+void travel_pid_statistic(struct dio_nugget* pdng);
+void process_pid_statistic(int ng_cnt);
+void print_pid_statistic();
+static void __clear_pid_stat(struct rb_node* p);
+void clear_pid_statistic();
 
 /*--------------	global variables	-----------------------*/
 #define MAX_FILEPATH_LEN 255
@@ -964,20 +989,8 @@ void clear_path_statistic(void)
 }
 
 //---------------------------------------- pid statistic -------------------------------------------------//
-//global variables (and data structure) for pid statistic
-struct pid_stat_data{
-	struct rb_node link;
-
-	uint32_t pid;
-	uint64_t r_mint, r_maxt, r_tott, r_avgt;	//read min time, read max time, reat total time
-	uint64_t w_mint, w_maxt, w_tott, w_avgt;	//write min time, write max time, write total time
-	int r_cnt, w_cnt;	//count of occur
-};
-
-static struct rb_root psd_root = RB_ROOT;	//pid stat data root
-
 //function for handling data structure for pid statistic
-static struct pid_stat_data* rb_search_psd(uint32_t pid){
+struct pid_stat_data* rb_search_psd(uint32_t pid){
 	struct rb_node* n = psd_root.rb_node;
 	struct pid_stat_data* ppsd = NULL;
 	
@@ -994,7 +1007,7 @@ static struct pid_stat_data* rb_search_psd(uint32_t pid){
 	return NULL;
 }
 
-static struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd){
+struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd){
 	struct pid_stat_data* ret;
 	struct rb_node** p = &(psd_root.rb_node);
 	struct rb_node* parent = NULL;
@@ -1015,7 +1028,7 @@ static struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd){
 	return NULL;
 }
 
-static struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd){
+struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd){
 	struct pid_stat_data* ret = NULL;
 	if( (ret = __rb_insert_psd(newpsd) ) )
 		return ret;
@@ -1084,7 +1097,7 @@ void print_pid_statistic(){
 	}while( (node = rb_next(node)) != NULL );
 }
 
-static void __clear_pid_stat(struct rb_node* p){
+void __clear_pid_stat(struct rb_node* p){
 	if( p->rb_left != NULL )
 		__clear_pid_stat(p->rb_left);
 	if( p->rb_right != NULL )
