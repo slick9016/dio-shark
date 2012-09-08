@@ -193,6 +193,11 @@ static void statistic_list_for_each();
 void print_time();
 void print_sector();
 
+// disk I/O type statistic (just count)
+void init_type_statistic();
+void itr_type_statistic(struct blk_io_trace* pbit);
+void process_type_statistic(int bit_cnt);
+
 // path statistic functions
 int instr(const char* str1, const char* str2);
 struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states);
@@ -204,7 +209,7 @@ void process_path_statistic(int ng_cnt);
 void create_diocpu(void);
 void init_cpu_statistic(void);
 void itr_cpu_statistic(struct blk_io_trace* pbit);
-void process_cpu_statistic(int ng_cnt);
+void process_cpu_statistic(int bit_cnt);
 
 // pid statistic functions
 struct pid_stat_data{
@@ -840,6 +845,32 @@ void print_sector() {
 		}
 	}
 }
+
+//------------------- i/o type statistics -------------------------------//
+static int r_cnt,w_cnt,x_cnt;
+
+void init_type_statistic(){
+	r_cnt = w_cnt = x_cnt = 0;
+}
+
+void itr_type_statistic(struct blk_io_trace* pbit){
+	uint32_t category = pbit->action >> BLK_TC_SHIFT;
+
+	if( category & BLK_TC_READ )
+		r_cnt++;
+	else if( category & BLK_TC_WRITE )
+		w_cnt++;
+	else
+		x_cnt++;
+}
+
+void process_type_statistic(int bit_cnt){
+	fprintf(output, "%7s %10s %13s\n", "TYPE","COUNT","PERCENTAGE");
+	
+	fprintf(output, "%7s %10d %13d\n", "READ",r_cnt, r_cnt/bit_cnt*100);
+	fprintf(output, "%7s %10d %13d\n", "WRITE",w_cnt,w_cnt/bit_cnt*100);
+	fprintf(output, "%7s %10d %13d\n", "UNKNOWN",x_cnt, x_cnt/bit_cnt*100);
+}
 //------------------- path statistics ------------------------------//
 struct list_head nugget_path_head;
 struct dio_nugget_path* pnugget_path;
@@ -1283,7 +1314,7 @@ void itr_cpu_statistic(struct blk_io_trace* pbit)
 */
 }
 
-void process_cpu_statistic(int ng_cnt)
+void process_cpu_statistic(int bit_cnt)
 {
 	int i;
 
