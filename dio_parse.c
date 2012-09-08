@@ -213,18 +213,15 @@ void print_cpu_statistic(void);
 void clear_cpu_statistic(void);
 
 // pid statistic functions
-//global variables (and data structure) for pid statistic
 struct pid_stat_data{
 	struct rb_node link;
 
 	uint32_t pid;
-	uint64_t r_mint, r_maxt, r_tott, r_avgt;	//read min time, read max time, reat total time
-	uint64_t w_mint, w_maxt, w_tott, w_avgt;	//write min time, write max time, write total time
-	int r_cnt, w_cnt;	//count of occur
+        struct data_time data_time_read;
+        struct data_time data_time_write;
 };
 static struct rb_root psd_root = RB_ROOT;	//pid stat data root
 
-//function for handling data structure for pid statistic
 static struct pid_stat_data* rb_search_psd(uint32_t pid);
 static struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd);
 static struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd);
@@ -1044,11 +1041,18 @@ void travel_pid_statistic(struct dio_nugget* pdng){
 	if( ppsd == NULL ){
 		ppsd = (struct pid_stat_data*)malloc(sizeof(struct pid_stat_data));
 		ppsd->pid = pdng->pid;
-		ppsd->r_mint = ppsd->w_mint = (uint64_t)(-1);
-		ppsd->r_maxt = ppsd->w_maxt = 0;
-		ppsd->r_tott = ppsd->w_tott = 0;
-		ppsd->r_avgt = ppsd->w_avgt = 0;
-		ppsd->r_cnt = ppsd->w_cnt = 0;
+		
+		ppsd->data_time_read.min_time = (unsigned int)(-1);
+		ppsd->data_time_read.max_time = 0;
+		ppsd->data_time_read.total_time = 0;
+		ppsd->data_time_read.count = 0;
+		ppsd->data_time_read.average_time = 0;
+
+		ppsd->data_time_write.min_time = (unsigned int)(-1);
+		ppsd->data_time_write.max_time = 0;
+		ppsd->data_time_write.total_time = 0;
+		ppsd->data_time_write.count = 0;
+		ppsd->data_time_write.average_time = 0;
 		
 		rb_insert_psd(ppsd);
 	}
@@ -1056,21 +1060,21 @@ void travel_pid_statistic(struct dio_nugget* pdng){
 	uint64_t tmpt = 0;
 	if( pdng->category & BLK_TC_READ ){
 		tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
-		if( ppsd->r_mint > tmpt )
-			ppsd->r_mint = tmpt;
-		else if( ppsd->r_maxt < tmpt )
-			ppsd->r_maxt = tmpt;
-		ppsd->r_tott += tmpt;
-		ppsd->r_cnt ++;
+		if( ppsd->data_time_read.min_time > tmpt )
+			ppsd->data_time_read.min_time = tmpt;
+		else if( ppsd->data_time_read.max_time < tmpt )
+			ppsd->data_time_read.max_time = tmpt;
+		ppsd->data_time_read.total_time += tmpt;
+		ppsd->data_time_read.count ++;
 	}
 	else if( pdng->category & BLK_TC_WRITE ){
 		tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
-		if( ppsd->w_mint > tmpt )
-			ppsd->w_mint = tmpt;
-		else if( ppsd->w_maxt < tmpt )
-			ppsd->w_maxt = tmpt;
-		ppsd->w_tott = tmpt;
-		ppsd->w_cnt ++;
+		if( ppsd->data_time_write.min_time > tmpt )
+			ppsd->data_time_write.min_time = tmpt;
+		else if( ppsd->data_time_write.max_time < tmpt )
+			ppsd->data_time_write.max_time = tmpt;
+		ppsd->data_time_write.total_time = tmpt;
+		ppsd->data_time_write.count ++;
 	}
 }
 
@@ -1081,8 +1085,10 @@ void process_pid_statistic(int ng_cnt){
 		struct pid_stat_data* ppsd = NULL;
 		ppsd = rb_entry(node, struct pid_stat_data, link);
 		
-		ppsd->r_avgt = ppsd->r_tott / ppsd->r_cnt;
-		ppsd->w_avgt = ppsd->w_tott / ppsd->w_cnt;
+		ppsd->data_time_read.average_time = 
+				ppsd->data_time_read.total_time / ppsd->data_time_read.count;
+		ppsd->data_time_write.average_time = 
+				ppsd->data_time_write.total_time / ppsd->data_time_write.count;
 	}while( (node = rb_next(node)) != NULL );
 }
 
