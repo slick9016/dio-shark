@@ -85,7 +85,6 @@ struct dio_nugget{
 	uint32_t pid;
 	struct dio_nugget* mlink;	//if it was merged, than mlink points the other nugget
 	int ngflag;
-	int idxCPU;
 };
 
 // list node of blk_io_trace
@@ -204,10 +203,8 @@ void process_path_statistic(int ng_cnt);
 // cpu statistic functions
 void create_diocpu(void);
 void init_cpu_statistic(void);
-void travel_cpu_statistic(struct dio_nugget* pdng);
+void itr_cpu_statistic(struct blk_io_trace* pbit);
 void process_cpu_statistic(int ng_cnt);
-void print_cpu_statistic(void);
-void clear_cpu_statistic(void);
 
 // pid statistic functions
 struct pid_stat_data{
@@ -222,12 +219,10 @@ static struct rb_root psd_root = RB_ROOT;	//pid stat data root
 static struct pid_stat_data* rb_search_psd(uint32_t pid);
 static struct pid_stat_data* __rb_insert_psd(struct pid_stat_data* newpsd);
 static struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd);
+static void __clear_pid_stat(struct rb_node* p);
 void init_pid_statistic();
 void travel_pid_statistic(struct dio_nugget* pdng);
 void process_pid_statistic(int ng_cnt);
-void print_pid_statistic();
-static void __clear_pid_stat(struct rb_node* p);
-void clear_pid_statistic();
 
 /*--------------	global variables	-----------------------*/
 #define MAX_FILEPATH_LEN 255
@@ -405,8 +400,8 @@ int main(int argc, char** argv){
 		add_nugget_stat_func(NULL, NULL, print_sector);
 	}
 
-	statistic_rb_traveling();
-	statistic_list_for_each();
+	//statistic_rb_traveling();
+	//statistic_list_for_each();
 
 	//clean all list entities
 	if(output!=stdout){
@@ -671,8 +666,6 @@ void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf){
 		pdngbuf->size = pbit->bytes;
 		pdngbuf->pid = pbit->pid;
 		pdngbuf->category = pbit->action >> BLK_TC_SHIFT;
-		if( pbit->cpu < 128 )
-			pdngbuf->idxCPU = pbit->cpu;
 	}
 
 	handle_action(pbit->action, pdngbuf);
@@ -1248,25 +1241,26 @@ void init_cpu_statistic(void)
 	create_diocpu();
 }
 
-void travel_cpu_statistic(struct dio_nugget* pdng)
+void itr_cpu_statistic(struct blk_io_trace* pbit)
 {
 	unsigned int nugget_time;
 	struct data_time *pdata_time;
+	uint32_t category = pbit->action >> BLK_TC_SHIFT;
 
 	// Is enough diocpu?
-	while(maxCPU < pdng->idxCPU)
+	while(maxCPU < pbit->cpu)
 	{
 		create_diocpu();
 	}
 	
 	// Distribute read/write data and point that.
-	if(pdng->category & BLK_TC_READ)
+	if(category & BLK_TC_READ)
 	{
-		pdata_time = &diocpu[pdng->idxCPU].data_time_read;
+		pdata_time = &diocpu[pbit->cpu].data_time_read;
 	}
-	else if(pdng->category & BLK_TC_WRITE)
+	else if(category & BLK_TC_WRITE)
 	{
-		pdata_time = &diocpu[pdng->idxCPU].data_time_write;
+		pdata_time = &diocpu[pbit->cpu].data_time_write;
 	}
 	else
 	{
@@ -1274,7 +1268,8 @@ void travel_cpu_statistic(struct dio_nugget* pdng)
 	}
 	
 	// Process datas.
-	nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
+/*
+	//nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
 	pdata_time->count++;
 	pdata_time->total_time += nugget_time;
 	if(pdata_time->max_time < nugget_time)
@@ -1285,11 +1280,14 @@ void travel_cpu_statistic(struct dio_nugget* pdng)
 	{
 		pdata_time->min_time = nugget_time; 
 	}
+*/
 }
 
 void process_cpu_statistic(int ng_cnt)
 {
 	int i;
+
+	printf("%4s %6s %6s %12s %12s %12s \n", "CPU", "Type", "No", "AverageTime", "MaxTime", "MinTime");
 
 	// Calculate average time.
 	for(i=0 ; i<maxCPU ; i++)
@@ -1311,16 +1309,8 @@ void process_cpu_statistic(int ng_cnt)
 		{
 			diocpu[i].data_time_write.min_time = 0;
 		}
-	}
-}
 
-void print_cpu_statistic(void)
-{
-	int i;
-
-	printf("%4s %6s %6s %12s %12s %12s \n", "CPU", "Type", "No", "AverageTime", "MaxTime", "MinTime");
-	for(i=0 ; i<maxCPU ; i++)
-	{
+		//printing
 		fprintf(output, "%4d %6s %6d %2llu:%.10llu %2llu:%.10llu %2llu:%.10llu \n", i, "Read", diocpu[i].data_time_read.count,
 			SECONDS(diocpu[i].data_time_read.average_time), NANO_SECONDS(diocpu[i].data_time_read.average_time),
 			SECONDS(diocpu[i].data_time_read.max_time), NANO_SECONDS(diocpu[i].data_time_read.max_time),
@@ -1333,9 +1323,8 @@ void print_cpu_statistic(void)
 		);
 		fprintf(output, "\n");
 	}
-}
 
-void clear_cpu_statistic(void)
-{
+	//clear data
 	free(diocpu);
 }
+
