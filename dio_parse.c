@@ -107,18 +107,19 @@ struct data_time
 
 struct dio_nugget_path
 {
-        struct list_head link;
+	struct list_head link;
 
-        char states[MAX_ELEMENT_SIZE];
+	char states[MAX_ELEMENT_SIZE];
 
-        struct data_time data_time_read;
-        struct data_time data_time_write;
+	struct data_time data_time_read;
+	struct data_time data_time_write;
 };
 
 struct dio_cpu
 {
-        struct data_time data_time_read;
-        struct data_time data_time_write;
+	int r_cnt;
+	int w_cnt;
+	int x_cnt;
 };
 
 
@@ -865,12 +866,17 @@ void itr_type_statistic(struct blk_io_trace* pbit){
 }
 
 void process_type_statistic(int bit_cnt){
+	int tot;
 	fprintf(output, "%7s %10s %13s\n", "TYPE","COUNT","PERCENTAGE");
 	
-	fprintf(output, "%7s %10d %13d\n", "READ",r_cnt, r_cnt/bit_cnt*100);
-	fprintf(output, "%7s %10d %13d\n", "WRITE",w_cnt,w_cnt/bit_cnt*100);
-	fprintf(output, "%7s %10d %13d\n", "UNKNOWN",x_cnt, x_cnt/bit_cnt*100);
+	fprintf(output, "%7s %10d %13d\n", "R",r_cnt, r_cnt/(double)bit_cnt*100);
+	fprintf(output, "%7s %10d %13d\n", "W",w_cnt,w_cnt/(double)bit_cnt*100);
+	fprintf(output, "%7s %10d %13d\n", "Unknown",x_cnt, x_cnt/(double)bit_cnt*100);
+
+	tot = r_cnt + w_cnt + x_cnt;
+	fprintf(output, "%7s %10d %13d\n", "Total :",tot, tot/(double)bit_cnt*100);
 }
+
 //------------------- path statistics ------------------------------//
 struct list_head nugget_path_head;
 struct dio_nugget_path* pnugget_path;
@@ -1259,11 +1265,6 @@ void create_diocpu(void)
 
 	// Init members
 	memset(diocpu + maxCPU, 0, sizeof(struct dio_cpu) * INIT_NUM_CPU);
-	for(i=0 ; i<INIT_NUM_CPU ; i++)
-	{
-		diocpu[maxCPU + i].data_time_read.min_time = -1;
-		diocpu[maxCPU + i].data_time_write.min_time = -1;
-	}
 	maxCPU += INIT_NUM_CPU;
 }
 
@@ -1274,12 +1275,10 @@ void init_cpu_statistic(void)
 
 void itr_cpu_statistic(struct blk_io_trace* pbit)
 {
-	unsigned int nugget_time;
-	struct data_time *pdata_time;
 	uint32_t category = pbit->action >> BLK_TC_SHIFT;
 
 	// Is enough diocpu?
-	while(maxCPU < pbit->cpu)
+	while(maxCPU <= pbit->cpu)
 	{
 		create_diocpu();
 	}
@@ -1287,72 +1286,37 @@ void itr_cpu_statistic(struct blk_io_trace* pbit)
 	// Distribute read/write data and point that.
 	if(category & BLK_TC_READ)
 	{
-		pdata_time = &diocpu[pbit->cpu].data_time_read;
+		diocpu[pbit->cpu].r_cnt++;
 	}
 	else if(category & BLK_TC_WRITE)
 	{
-		pdata_time = &diocpu[pbit->cpu].data_time_write;
+		diocpu[pbit->cpu].w_cnt++;
 	}
 	else
 	{
-		return ;
+		diocpu[pbit->cpu].x_cnt++;
 	}
-	
-	// Process datas.
-/*
-	//nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
-	pdata_time->count++;
-	pdata_time->total_time += nugget_time;
-	if(pdata_time->max_time < nugget_time)
-	{
-		pdata_time->max_time = nugget_time; 
-	}
-	if(pdata_time->min_time > nugget_time)
-	{
-		pdata_time->min_time = nugget_time; 
-	}
-*/
 }
 
 void process_cpu_statistic(int bit_cnt)
 {
-	int i;
+	int i, tot;
 
-	printf("%4s %6s %6s %12s %12s %12s \n", "CPU", "Type", "No", "AverageTime", "MaxTime", "MinTime");
+	fprintf(output,"%4s %7s %8s %8s\n", "CPU", "Type", "COUNT", "RATE");
 
-	// Calculate average time.
 	for(i=0 ; i<maxCPU ; i++)
 	{
-		if(diocpu[i].data_time_read.count != 0)
-		{
-			diocpu[i].data_time_read.average_time = diocpu[i].data_time_read.total_time / diocpu[i].data_time_read.count;
-		}
-		if(diocpu[i].data_time_write.count != 0)
-		{
-			diocpu[i].data_time_write.average_time = diocpu[i].data_time_write.total_time / diocpu[i].data_time_write.count;
-		}
-		// if min_time is -1 that initializing value for calculating min_time, change that to 0.
-		if(diocpu[i].data_time_read.min_time == -1)
-		{
-			diocpu[i].data_time_read.min_time = 0;
-		}
-		if(diocpu[i].data_time_write.min_time == -1)
-		{
-			diocpu[i].data_time_write.min_time = 0;
-		}
+		fprintf(output,"%4d %7s %8d %8d\n",
+			i, "R", diocpu[i].r_cnt, diocpu[i].r_cnt/(double)bit_cnt*100);
+		fprintf(output,"%4s %7s %8d %8d\n",
+			" ","W",diocpu[i].w_cnt, diocpu[i].w_cnt/(double)bit_cnt*100);
+		fprintf(output,"%4s %7s %8d %8d\n",
+			" ","unknown",diocpu[i].x_cnt, diocpu[i].x_cnt/(double)bit_cnt*100);
 
-		//printing
-		fprintf(output, "%4d %6s %6d %2llu:%.10llu %2llu:%.10llu %2llu:%.10llu \n", i, "Read", diocpu[i].data_time_read.count,
-			SECONDS(diocpu[i].data_time_read.average_time), NANO_SECONDS(diocpu[i].data_time_read.average_time),
-			SECONDS(diocpu[i].data_time_read.max_time), NANO_SECONDS(diocpu[i].data_time_read.max_time),
-			SECONDS(diocpu[i].data_time_read.min_time), NANO_SECONDS(diocpu[i].data_time_read.min_time)
-		);
-		fprintf(output, "%4s %6s %6d %2llu:%.10llu %2llu:%.10llu %2llu:%.10llu \n", " ", "Write", diocpu[i].data_time_write.count,
-			SECONDS(diocpu[i].data_time_write.average_time), NANO_SECONDS(diocpu[i].data_time_write.average_time),
-			SECONDS(diocpu[i].data_time_write.max_time), NANO_SECONDS(diocpu[i].data_time_write.max_time),
-			SECONDS(diocpu[i].data_time_write.min_time), NANO_SECONDS(diocpu[i].data_time_write.min_time)
-		);
-		fprintf(output, "\n");
+		tot = diocpu[i].r_cnt + diocpu[i].w_cnt + diocpu[i].x_cnt;
+		fprintf(output,"%4s %7s %8d %8d\n",
+			" ","Total :",tot, tot/(double)bit_cnt*100);
+		fprintf(output,"\n");
 	}
 
 	//clear data
