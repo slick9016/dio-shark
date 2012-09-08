@@ -111,12 +111,20 @@ struct dio_nugget_path
 
 // statistic initialize function.
 typedef void(*statistic_init_func)(void);
+
 // statistic traveling function. 
 // rb traveling function will give the each nugget as a parameter
 typedef void(*statistic_travel_func)(struct dio_nugget*);
+
+// data process function.
+typedef void(*statistic_process_func)(int);
+
+// statistic printing function
+typedef void(*statistic_print_func)(void);
+
 // statistic clear function. 
 // rb traveling function will give a count of nugget as a parameter
-typedef void(*statistic_clear_func)(int);
+typedef void(*statistic_clear_func)(void);
 #define MAX_STATISTIC_FUNCTION 10
 
 /*--------------	function interfaces	-----------------------*/
@@ -156,6 +164,8 @@ static void handle_action(uint32_t act, struct dio_nugget* pdng);
 // add the statistic function to statistic function table
 static void add_statistic_function(statistic_init_func stat_init_fn, 
 					statistic_travel_func stat_trv_fn,
+					statistic_process_func stat_proc_fn,
+					statistic_print_func stat_prt_fn,
 					statistic_clear_func stat_clr_fn);
 
 // traveling the rb tree with execution the added statistic functions
@@ -171,6 +181,8 @@ static struct list_head biten_head;
 
 static statistic_init_func stat_init_fns[MAX_STATISTIC_FUNCTION];
 static statistic_travel_func stat_trv_fns[MAX_STATISTIC_FUNCTION];
+static statistic_process_func stat_proc_fns[MAX_STATISTIC_FUNCTION];
+static statistic_print_func stat_prt_fns[MAX_STATISTIC_FUNCTION];
 static statistic_clear_func stat_clr_fns[MAX_STATISTIC_FUNCTION];
 static int stat_fn_cnt = 0;
 
@@ -532,12 +544,17 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 }
 
 void add_statistic_function(statistic_init_func stat_init_fn, 
-		statistic_travel_func stat_trv_fn, statistic_clear_func stat_clr_fn){
+				statistic_travel_func stat_trv_fn,
+				statistic_process_func stat_proc_fn,
+				statistic_print_func stat_prt_fn,
+				statistic_clear_func stat_clr_fn){
 	if( stat_fn_cnt +1 >= MAX_STATISTIC_FUNCTION )
 		return;
 	
 	stat_init_fns[stat_fn_cnt] = stat_init_fn;
 	stat_trv_fns[stat_fn_cnt] = stat_trv_fn;
+	stat_proc_fns[stat_fn_cnt] = stat_proc_fn;
+	stat_prt_fns[stat_fn_cnt] = stat_prt_fn;
 	stat_clr_fns[stat_fn_cnt] = stat_clr_fn;
 	stat_fn_cnt++;
 }
@@ -551,7 +568,7 @@ void statistic_rb_traveling(){
 		stat_init_fns[i]();
 	
 	node = rb_first(&rben_root);
-	while((node = rb_next(node)) != NULL){
+	do{
 		struct dio_rbentity* prben = NULL;
 		prben = rb_entry(node, struct dio_rbentity, rblink);
 
@@ -561,11 +578,19 @@ void statistic_rb_traveling(){
 				stat_trv_fns[i](pdng);
 			cnt++;
 		}
-	}//end traveling
+	}while((node = rb_next(node)) != NULL);
+
+	//process data
+	for(i=0; i<stat_fn_cnt; i++)
+		stat_proc_fns[i](cnt);
+
+	//print statistic
+	for(i=0; i<stat_fn_cnt; i++)
+		stat_prt_fns[i]();
 
 	//clear all statistic functions
 	for(i=0; i<stat_fn_cnt; i++)
-		stat_clr_fns[i](cnt);
+		stat_clr_fns[i]();
 }
 
 int instr(const char* str1, const char* str2)
@@ -683,7 +708,7 @@ void print_path_statistic(void)
 	} 
 }
 
-//----------------------------------- section statistics ------------------------------//
+//------------------- section statistics (for example)------------------------------//
 #define MAX_MON_SECTION 10
 static char mon_section[MAX_MON_SECTION][2];
 static uint64_t mon_sec_time[MAX_MON_SECTION];
@@ -732,10 +757,13 @@ void travel_section_statistic(struct dio_nugget* pdng){
 	}
 }
 
-void clear_section_statistic(int ng_cnt){
+void process_section_statistic(int ng_cnt){
 	int i=0;
 	for(; i<mon_cnt; i++){
 		//calculate the average spending time for each section
 		mon_sec_time[i] /= mon_sec_cnt[i];
 	}
+}
+
+void clear_section_statistic(){
 }
