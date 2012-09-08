@@ -1,0 +1,65 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ARG_OPTS	dio-shark.c	167;"	d	file:
+BLKTRACESETUP	dio-shark.h	15;"	d
+BLKTRACESTART	dio-shark.h	16;"	d
+BLKTRACESTOP	dio-shark.h	17;"	d
+BLKTRACETEARDOWN	dio-shark.h	18;"	d
+DIO_SHARK_H	dio-shark.h	2;"	d
+OBJS	Makefile	/^OBJS=dio-shark.o$/;"	m
+SHARK_DONE	dio-shark.h	/^	SHARK_DONE		\/\/shark thread done all of works$/;"	e	enum:shark_stat
+SHARK_READY	dio-shark.h	/^	SHARK_READY = 0,	\/\/shark thread is ready$/;"	e	enum:shark_stat
+SHARK_SICK	dio-shark.h	/^	SHARK_SICK,		\/\/shark thread has problem$/;"	e	enum:shark_stat
+SHARK_WORKING	dio-shark.h	/^	SHARK_WORKING,$/;"	e	enum:shark_stat
+act_mask	dio-shark.h	/^	__u16 act_mask;                 \/* input *\/$/;"	m	struct:user_setup
+arg_opts	dio-shark.c	/^static struct option arg_opts[] = {$/;"	v	typeref:struct:option	file:
+buf_nr	dio-shark.h	/^	__u32 buf_nr;                   \/* input *\/$/;"	m	struct:user_setup
+buf_size	dio-shark.h	/^	__u32 buf_size;                 \/* input *\/$/;"	m	struct:user_setup
+buts_name	dio-shark.h	/^	char *buts_name;$/;"	m	struct:devpath
+cond	dio-shark.h	/^	pthread_cond_t cond;$/;"	m	struct:shark_inven
+cpu	dio-shark.h	/^	int cpu;$/;"	m	struct:tracer
+cpu_info	dio-shark.h	/^struct cpu_info{$/;"	s
+cpuinfo	dio-shark.h	/^	struct cpu_info cpuinfo;$/;"	m	struct:shark_inven	typeref:struct:shark_inven::cpu_info
+debugFilePath	dio-shark.h	/^	char debugFilePath[256];$/;"	m	struct:tracer
+del_sharks	dio-shark.c	/^void del_sharks(void* pdata){$/;"	f
+devpath	dio-shark.h	/^struct devpath {$/;"	s
+dfp	dio-shark.h	/^	int dfp, ofp;$/;"	m	struct:tracer
+dp	dio-shark.c	/^static struct devpath dp;$/;"	v	typeref:struct:devpath	file:
+end_lba	dio-shark.h	/^	__u64 end_lba;$/;"	m	struct:user_setup
+fd	dio-shark.h	/^	int fd, ncpus;$/;"	m	struct:devpath
+list	dio-shark.h	/^	struct dl_head* list;$/;"	m	struct:shark_inven	typeref:struct:shark_inven::dl_head
+main	dio-shark.c	/^int main(int argc, char** argv){$/;"	f
+mt_cond	dio-shark.c	/^static pthread_cond_t mt_cond    = PTHREAD_COND_INITIALIZER;$/;"	v	file:
+mt_mutext	dio-shark.c	/^static pthread_mutex_t mt_mutext = PTHREAD_MUTEX_INITIALIZER;$/;"	v	file:
+name	dio-shark.h	/^	char name[32];$/;"	m	struct:user_setup
+ncpus	dio-shark.h	/^	int fd, ncpus;$/;"	m	struct:devpath
+ofp	dio-shark.h	/^	int dfp, ofp;$/;"	m	struct:tracer
+outputFilePath	dio-shark.h	/^	char outputFilePath[256];$/;"	m	struct:tracer
+parse_args	dio-shark.c	/^bool parse_args(int argc, char** argv){$/;"	f
+path	dio-shark.h	/^	char *path;$/;"	m	struct:devpath
+pfds	dio-shark.h	/^	struct pollfd *pfds;$/;"	m	struct:tracer	typeref:struct:tracer::pollfd
+pid	dio-shark.h	/^	__u32 pid;$/;"	m	struct:user_setup
+set_devpath	dio-shark.c	/^static int set_devpath(char *path){$/;"	f	file:
+setup	dio-shark.c	/^static struct user_setup setup;$/;"	v	typeref:struct:user_setup	file:
+shark_body	dio-shark.c	/^void* shark_body(void* param){$/;"	f
+shark_inven	dio-shark.h	/^struct shark_inven{$/;"	s
+shark_stat	dio-shark.h	/^enum shark_stat{$/;"	g
+sharks	dio-shark.c	/^static struct dl_head* sharks;	\/\/This list's entity data type is struct shark_inven$/;"	v	typeref:struct:dl_head	file:
+sig_handler	dio-shark.c	/^void sig_handler(int sig){$/;"	f
+start_lba	dio-shark.h	/^	__u64 start_lba;$/;"	m	struct:user_setup
+start_tracer	dio-shark.c	/^static void start_tracer(int cpu) {$/;"	f	file:
+stat	dio-shark.h	/^	enum shark_stat stat;$/;"	m	struct:shark_inven	typeref:enum:shark_inven::shark_stat
+stop_shark	dio-shark.c	/^void stop_shark() {$/;"	f
+td	dio-shark.h	/^	pthread_t td;$/;"	m	struct:shark_inven
+thread	dio-shark.h	/^	pthread_t thread;$/;"	m	struct:tracer
+thread_main	dio-shark.c	/^static void *thread_main(void *arg){$/;"	f	file:
+thread_start	dio-shark.c	/^static int thread_start = 0;$/;"	v	file:
+thread_wait	dio-shark.c	/^static int thread_wait = 0;$/;"	v	file:
+tp	dio-shark.c	/^static struct tracer *tp;$/;"	v	typeref:struct:tracer	file:
+tracer	dio-shark.h	/^struct tracer {$/;"	s
+usage_detail	dio-shark.c	/^char usage_detail[] = 	"\\n"\\$/;"	v
+user_setup	dio-shark.h	/^struct user_setup {$/;"	s

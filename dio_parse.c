@@ -128,6 +128,11 @@ typedef void(*statistic_clear_func)(void);
 #define MAX_STATISTIC_FUNCTION 10
 
 /*--------------	function interfaces	-----------------------*/
+/* function for option and print*/
+bool parse_args(int argc, char** argv);
+void print_time();
+void print_sector();
+
 /* function for bit list */
 // insert bit_entity data into rbiten_head order by time
 static void insert_proper_pos(struct bit_entity* pbiten);
@@ -179,7 +184,17 @@ struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, cha
 
 /*--------------	global variables	-----------------------*/
 #define MAX_FILEPATH_LEN 255
+#define PRINT_TYPE_TIME 0
+#define PRINT_TYPE_SECTOR 1
+
 static char respath[MAX_FILEPATH_LEN];	//result file path
+static int print_type;
+static FILE *output;
+static __u64 time_start;		/* in nanoseconds */
+static __u64 time_end;
+static __u64 sector_start;
+static __u64 sector_end;
+
 static struct rb_root rben_root;	//root of rbentity tree
 static struct list_head biten_head;
 
@@ -190,10 +205,51 @@ static statistic_print_func stat_prt_fns[MAX_STATISTIC_FUNCTION];
 static statistic_clear_func stat_clr_fns[MAX_STATISTIC_FUNCTION];
 static int stat_fn_cnt = 0;
 
+#define ARG_OPTS "i:o:p:t:s"
+static struct option arg_opts[] = {
+	{	
+		.name = "resfile",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'i',
+	},	
+	{
+		.name = "outfile",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'o'
+	}, 
+	{
+		.name = "print",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'p'
+	},
+	{
+		.name = "time",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 't'
+	},
+	{
+		.name = "sector",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 's'
+	}
+};
+
 /*--------------	function implementations	---------------*/
 int main(int argc, char** argv){
 	INIT_LIST_HEAD(&biten_head);
 	rben_root = RB_ROOT;
+
+	print_type = PRINT_TYPE_TIME;
+	time_start = 0;
+	time_end = 0;
+	sector_start = 0;
+	sector_end = 0;
+
 
 	int ifd = -1;
 	int rdsz = 0;
@@ -201,6 +257,7 @@ int main(int argc, char** argv){
 
 	strncpy(respath, "dioshark.output", MAX_FILEPATH_LEN);
 
+	parse_args(argc, argv);
 	ifd = open(respath, O_RDONLY);
 	if( ifd < 0 ){
 		perror("failed to open result file");
@@ -243,24 +300,9 @@ int main(int argc, char** argv){
 		if( (pbiten->bit.action >> BLK_TC_SHIFT) == BLK_TC_NOTIFY )
 			continue;
 			
-#ifdef DEBUG
-			DBGOUT("============================ \n");
-			DBGOUT("sequence : %u \n", pbiten->bit.sequence);
-			DBGOUT("time : %5d.%09lu \n", (int)SECONDS(pbiten->bit.time), (unsigned long)NANO_SECONDS(pbiten->bit.time));
-			DBGOUT("sector : %llu \n", pbiten->bit.sector);
-			DBGOUT("bytes : %u \n", pbiten->bit.bytes);
-			char c = GET_ACTION_CHAR(pbiten->bit.action);
-			DBGOUT("action : %x(%c) \n", pbiten->bit.action,c);
-			DBGOUT("pid : %u \n", pbiten->bit.pid);
-			DBGOUT("device : %u \n", pbiten->bit.device);
-			DBGOUT("cpu : %u \n", pbiten->bit.cpu);
-			DBGOUT("error : %u \n", pbiten->bit.error);
-			DBGOUT("pdu_len : %u \n", pbiten->bit.pdu_len);
-			DBGOUT("length of read : %d \n", rdsz);
-			DBGOUT("\n");
-#endif	
 		//insert into list order by time
 		insert_proper_pos(pbiten);
+
 		pbiten = NULL;
 	}
 
@@ -282,6 +324,22 @@ int main(int argc, char** argv){
 		extract_nugget(&p->bit, pdng);
 	}
 
+
+
+	if(output==NULL) {
+		output = stdout;
+	}
+
+	if(print_type == PRINT_TYPE_TIME) {
+		print_time();
+	} else if(print_type == PRINT_TYPE_SECTOR) {
+		print_sector();
+	}
+
+	if(output!=stdout){
+		fclose(output);
+	}
+
 	print_path_statistic();
 
 	//clean all list entities
@@ -292,6 +350,51 @@ err:
 	if( pbiten != NULL )
 		free(pbiten);
 	return 0;
+}
+
+bool parse_args(int argc, char** argv){
+    char tok;
+	char *p;
+    while( (tok = getopt_long(argc, argv, ARG_OPTS, arg_opts, NULL)) >= 0){
+        switch(tok){
+			case 'i':
+				memset(respath,0,sizeof(char)*MAX_FILEPATH_LEN);
+				strcpy(respath,optarg);
+				break;
+            case 'p':
+				if(!strcmp("sector",optarg)) {
+					print_type = PRINT_TYPE_SECTOR;
+				} else if(!strcmp("time",optarg)) {
+					print_type = PRINT_TYPE_TIME;
+				} else {
+					printf("Print Type Error\n");
+					exit(1);
+				}
+                break;
+            case 'o':
+				output = fopen(optarg,"w");
+				if(output==NULL) {
+					printf("Output File Open Error\n");
+					exit(1);
+				}
+                break;
+			case 't':
+				p = strtok(optarg,",");
+				time_start = atoll(p);
+				p = strtok(NULL,",");
+				time_end = atoll(p);
+				break;
+			case 's':
+				p = strtok(optarg,",");
+				sector_start = atoll(p);
+				p = strtok(NULL,",");
+				sector_end = atoll(p);
+				break;
+        };
+    }
+
+
+    return true;
 }
 
 void insert_proper_pos(struct bit_entity* pbiten){
@@ -642,6 +745,52 @@ struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, cha
 	}
 
 	return NULL;
+}
+
+void print_time() {
+	struct bit_entity* p = NULL;
+
+	list_for_each_entry(p, &biten_head, link) {
+		if(p->bit.sequence == 0) continue;
+		if( (time_start == 0 && time_end ==0) || 
+			(time_start > p->bit.time || time_end < p->bit.time)) continue;
+
+		fprintf(output,"%u ",p->bit.sequence);
+		fprintf(output,"%5d.%09lu ", (int)SECONDS(p->bit.time), (unsigned long)NANO_SECONDS(p->bit.time));
+		fprintf(output,"%llu ",p->bit.sector);
+		fprintf(output,"%u ",p->bit.pid);
+		fprintf(output,"%u\n",p->bit.bytes);
+	}
+	
+}
+
+void print_sector() {
+
+	struct rb_node *node;
+
+	node = rb_first(&rben_root);
+
+	while((node = rb_next(node)) != NULL) {
+
+		struct list_head* nugget_head;
+		struct dio_rbentity* prbentity;
+
+		prbentity = rb_entry(node, struct dio_rbentity, rblink);
+
+		struct dio_nugget* pdng;
+
+		list_for_each_entry(pdng, &(prbentity->nghead), nglink) {
+		
+			if( (sector_start == 0 && sector_end ==0) || 
+				(sector_start > p->bit.time || sector_end < p->bit.time)) continue;
+			
+			fprintf(output,"%llu \n",pdng->sector);
+
+		}
+		
+
+	}
+	
 }
 
 void init_path_statistic()
