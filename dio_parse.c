@@ -127,18 +127,16 @@ struct dio_cpu
 typedef void(*statistic_init_func)(void);
 
 // statistic traveling function. 
-// rb traveling function will give the each nugget as a parameter
+// rb traveling function will be given the each nugget as a parameter
 typedef void(*statistic_travel_func)(struct dio_nugget*);
+
+// statistic iterating function.
+// list iterating function will be given the each bit as a parameter
+typedef void(*statistic_itr_func)(struct blk_io_trace*);
 
 // data process function.
 typedef void(*statistic_process_func)(int);
 
-// statistic printing function
-typedef void(*statistic_print_func)(void);
-
-// statistic clear function. 
-// rb traveling function will give a count of nugget as a parameter
-typedef void(*statistic_clear_func)(void);
 #define MAX_STATISTIC_FUNCTION 10
 
 /*--------------	function interfaces	-----------------------*/
@@ -178,12 +176,13 @@ static void delete_nugget_at(uint64_t sector);
 static void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf);
 static void handle_action(uint32_t act, struct dio_nugget* pdng);
 
-// add the statistic function to statistic function table
-static void add_statistic_function(statistic_init_func stat_init_fn, 
+// add the statistic callback functions
+static void add_nugget_stat_func(statistic_init_func stat_init_fn, 
 					statistic_travel_func stat_trv_fn,
-					statistic_process_func stat_proc_fn,
-					statistic_print_func stat_prt_fn,
-					statistic_clear_func stat_clr_fn);
+					statistic_process_func stat_proc_fn);
+static void add_bit_stat_func(statistic_init_func stat_init_fn,
+					statistic_itr_func stat_itr_fn,
+					statistic_process_func stat_proc_fn);
 
 // traveling the rb tree with execution the added statistic functions
 static void statistic_rb_traveling();
@@ -201,8 +200,6 @@ struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, cha
 void init_path_statistic(void);
 void travel_path_statistic(struct dio_nugget* pdng);
 void process_path_statistic(int ng_cnt);
-void print_path_statistic(void);
-void clear_path_statistic(void);
 
 // cpu statistic functions
 void create_diocpu(void);
@@ -251,9 +248,8 @@ static struct list_head biten_head;
 
 static statistic_init_func stat_init_fns[MAX_STATISTIC_FUNCTION];
 static statistic_travel_func stat_trv_fns[MAX_STATISTIC_FUNCTION];
+static statistic_itr_func stat_itr_fns[MAX_STATISTIC_FUNCTION];
 static statistic_process_func stat_proc_fns[MAX_STATISTIC_FUNCTION];
-static statistic_print_func stat_prt_fns[MAX_STATISTIC_FUNCTION];
-static statistic_clear_func stat_clr_fns[MAX_STATISTIC_FUNCTION];
 static int stat_fn_cnt = 0;		//statistic callback functions iterated on tree
 static int stat_fn_list_cnt = 0;	//statistic callback functions iterated on list.
 					//callback function for list is filled from the 
@@ -404,12 +400,13 @@ int main(int argc, char** argv){
 	}
 
 	if(print_type == PRINT_TYPE_TIME) {
-		add_statistic_function(NULL, NULL, NULL, print_time, NULL);
+		add_bit_stat_func(NULL, NULL, print_time);
 	} else if(print_type == PRINT_TYPE_SECTOR) {
-		add_statistic_function(NULL, NULL, NULL, print_sector, NULL);
+		add_nugget_stat_func(NULL, NULL, print_sector);
 	}
 
 	statistic_rb_traveling();
+	statistic_list_for_each();
 
 	//clean all list entities
 	if(output!=stdout){
@@ -730,20 +727,28 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 	};
 }
 
-void add_statistic_function(statistic_init_func stat_init_fn, 
+void add_nugget_stat_func(statistic_init_func stat_init_fn, 
 				statistic_travel_func stat_trv_fn,
-				statistic_process_func stat_proc_fn,
-				statistic_print_func stat_prt_fn,
-				statistic_clear_func stat_clr_fn){
+				statistic_process_func stat_proc_fn){
 	if( stat_fn_cnt +1 >= MAX_STATISTIC_FUNCTION )
 		return;
 	
 	stat_init_fns[stat_fn_cnt] = stat_init_fn;
 	stat_trv_fns[stat_fn_cnt] = stat_trv_fn;
 	stat_proc_fns[stat_fn_cnt] = stat_proc_fn;
-	stat_prt_fns[stat_fn_cnt] = stat_prt_fn;
-	stat_clr_fns[stat_fn_cnt] = stat_clr_fn;
 	stat_fn_cnt++;
+}
+
+void add_bit_stat_func(statistic_init_func stat_init_fn,
+				statistic_itr_func stat_itr_fn,
+				statistic_process_func stat_proc_fn){
+	if( stat_fn_list_cnt >= MAX_STATISTIC_FUNCTION - stat_fn_cnt )
+		return;
+	
+	stat_init_fns[MAX_STATISTIC_FUNCTION - stat_fn_list_cnt - 1] = stat_init_fn;
+	stat_itr_fns[MAX_STATISTIC_FUNCTION - stat_fn_list_cnt - 1] = stat_itr_fn;
+	stat_proc_fns[MAX_STATISTIC_FUNCTION - stat_fn_list_cnt - 1] = stat_proc_fn;
+	stat_fn_list_cnt ++;
 }
 
 void statistic_rb_traveling(){
@@ -763,6 +768,7 @@ void statistic_rb_traveling(){
 
 		struct dio_nugget* pdng = NULL;
 		list_for_each_entry(pdng, &prben->nghead, nglink){
+			//traveling
 			for(i=0; i<stat_fn_cnt; i++){
 				if( stat_trv_fns[i] != NULL )
 					stat_trv_fns[i](pdng);	
@@ -777,17 +783,33 @@ void statistic_rb_traveling(){
 			stat_proc_fns[i](cnt);
 	}
 
-	//print statistic
-	for(i=0; i<stat_fn_cnt; i++){
-		if( stat_prt_fns[i] != NULL )
-			stat_prt_fns[i]();
+}
+
+void statistic_list_for_each(){
+	struct bit_entity* pos;
+	int i=0, cnt=0;
+	int itrcnt = MAX_STATISTIC_FUNCTION - stat_fn_list_cnt;
+
+	//init all statistic functions
+	for(i=MAX_STATISTIC_FUNCTION-1; i >= itrcnt; i--){
+		if( stat_init_fns[i] != NULL )
+			stat_init_fns[i]();
+	}
+	
+	list_for_each_entry(pos, &biten_head, link){
+		//foreach data
+		for(i=MAX_STATISTIC_FUNCTION-1; i >= itrcnt; i--){
+			if( stat_itr_fns[i] != NULL )
+				stat_itr_fns[i](&pos->bit);
+		}
 	}
 
-	//clear all statistic functions
-	for(i=0; i<stat_fn_cnt; i++){
-		if( stat_clr_fns[i] != NULL )
-			stat_clr_fns[i]();
+	//process data
+	for(i=MAX_STATISTIC_FUNCTION-1; i >= itrcnt; i--){
+		if( stat_proc_fns[i] != NULL )
+			stat_proc_fns[i](cnt);
 	}
+
 }
 
 //------------------- printing -------------------------------------//
@@ -927,6 +949,8 @@ void travel_path_statistic(struct dio_nugget* pdng)
 
 void process_path_statistic(int ng_cnt)
 {
+	fprintf(output,"%20s %6s %6s %12s %12s %12s \n", "Path", "Type", "No", "AverageTime", "MaxTime", "MinTime");
+
 	list_for_each_entry(pnugget_path, &nugget_path_head, link)
 	{
 		// Calculate average time.
@@ -948,15 +972,8 @@ void process_path_statistic(int ng_cnt)
 		{
 			pnugget_path->data_time_write.min_time = 0;
 		}
-	}
 
-}
-
-void print_path_statistic(void)
-{
-	fprintf(output,"%20s %6s %6s %12s %12s %12s \n", "Path", "Type", "No", "AverageTime", "MaxTime", "MinTime");
-	list_for_each_entry(pnugget_path, &nugget_path_head, link)
-	{
+		//printing
 		if(instr(pnugget_path->states, "P") || instr(pnugget_path->states, "U") || instr(pnugget_path->states, "?"))
 		{
 			continue;
@@ -974,19 +991,17 @@ void print_path_statistic(void)
 		);
 		fprintf(output, "\n");
 	}
-}
-
-void clear_path_statistic(void)
-{
-	struct dio_nugget_path* tmpdng_path;
 
 	// Free all dynamic allocated variables.
+	struct dio_nugget_path* tmpdng_path;
+
 	list_for_each_entry_safe(pnugget_path, tmpdng_path, &nugget_path_head, link)
 	{
 		list_del(&pnugget_path->link);
 		free(pnugget_path);
 	}
 }
+
 
 //---------------------------------------- pid statistic -------------------------------------------------//
 //function for handling data structure for pid statistic
@@ -1036,6 +1051,16 @@ struct pid_stat_data* rb_insert_psd(struct pid_stat_data* newpsd){
 	return ret;
 }
 
+void __clear_pid_stat(struct rb_node* p){
+	if( p->rb_left != NULL )
+		__clear_pid_stat(p->rb_left);
+	if( p->rb_right != NULL )
+		__clear_pid_stat(p->rb_right);
+	
+	struct pid_stat_data* psd = rb_entry(p, struct pid_stat_data, link);
+	free(psd);
+}
+
 void init_pid_statistic(){
 }
 
@@ -1083,27 +1108,28 @@ void travel_pid_statistic(struct dio_nugget* pdng){
 
 void process_pid_statistic(int ng_cnt){
 	struct rb_node* node = NULL;
+
+	fprintf(output,"%10s %6s %6s %12s %12s %12s \n", "pid", "Type", "No", "AverageTime", "MaxTime", "MinTime");
 	node = rb_first(&psd_root);
 	do{
 		struct pid_stat_data* ppsd = NULL;
 		ppsd = rb_entry(node, struct pid_stat_data, link);
 		
-		ppsd->data_time_read.average_time = 
+		if( ppsd->data_time_read.count != 0 ){
+			ppsd->data_time_read.average_time = 
 				ppsd->data_time_read.total_time / ppsd->data_time_read.count;
-		ppsd->data_time_write.average_time = 
+		}
+		if( ppsd->data_time_write.count != 0 ){
+			ppsd->data_time_write.average_time = 
 				ppsd->data_time_write.total_time / ppsd->data_time_write.count;
-	}while( (node = rb_next(node)) != NULL );
-}
+		}
 
-void print_pid_statistic(){
-	fprintf(output,"%10s %6s %6s %12s %12s %12s \n", "pid", "Type", "No", "AverageTime", "MaxTime", "MinTime");
-	struct rb_node* node = NULL;
-	node = rb_first(&psd_root);
-	do{
-		struct pid_stat_data* ppsd = NULL;
-		ppsd = rb_entry(node, struct pid_stat_data, link);
+		if( ppsd->data_time_read.min_time == (uint64_t)(-1) )
+			ppsd->data_time_read.min_time = 0;
+		if( ppsd->data_time_write.min_time == (uint64_t)(-1) )
+			ppsd->data_time_write.min_time = 0;
 
-		//print data
+		//printing
 		fprintf(output, "%10"PRIu32" %6s %6d %2llu:%.10llu %2llu:%.10llu %2llu:%.10llu \n", 
 			ppsd->pid, "Read", ppsd->data_time_read.count, 
 			SECONDS(ppsd->data_time_read.average_time), NANO_SECONDS(ppsd->data_time_read.average_time),
@@ -1119,22 +1145,12 @@ void print_pid_statistic(){
 		);
 		fprintf(output, "\n");
 	}while( (node = rb_next(node)) != NULL );
-}
 
-void __clear_pid_stat(struct rb_node* p){
-	if( p->rb_left != NULL )
-		__clear_pid_stat(p->rb_left);
-	if( p->rb_right != NULL )
-		__clear_pid_stat(p->rb_right);
-	
-	struct pid_stat_data* psd = rb_entry(p, struct pid_stat_data, link);
-	free(psd);
-}
-
-void clear_pid_statistic(){
+	//clear all pid tree
 	struct rb_node* parent = psd_root.rb_node;
 	__clear_pid_stat(parent);
 }
+
 
 //------------------- section statistics (for example)------------------------------//
 #define MAX_MON_SECTION 10
@@ -1190,13 +1206,11 @@ void process_section_statistic(int ng_cnt){
 	for(; i<mon_cnt; i++){
 		//calculate the average spending time for each section
 		mon_sec_time[i] /= mon_sec_cnt[i];
+
+		//print data
 	}
-}
 
-void print_section_statistic(){
-}
-
-void clear_section_statistic(){
+	//clear data
 }
 
 //------------------- cpu statistics ------------------------------//
