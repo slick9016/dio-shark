@@ -297,7 +297,6 @@ int main(int argc, char** argv){
 			goto err;
 		}
 		else if( rdsz == 0 ){
-			DBGOUT(">end read\n");
 			break;
 		}
 
@@ -313,9 +312,9 @@ int main(int argc, char** argv){
 		
 		//filter
 		if( (time_start > pbiten->bit.time || time_end < pbiten->bit.time) ||
-			(sector_start > pdng->sector || sector_end < pdng->sector) )
+			(sector_start > pbiten->bit.sector || sector_end < pbiten->bit.sector) )
 			continue;
-		if( filter_pid ==(uint64_t)(-1) || filter_pid != pbiten->bit.pid )
+		if( filter_pid !=(uint64_t)(-1) && filter_pid != pbiten->bit.pid )
 			continue;
 
 		if( (pbiten->bit.action >> BLK_TC_SHIFT) == BLK_TC_NOTIFY )
@@ -357,13 +356,13 @@ int main(int argc, char** argv){
 		add_statistic_function(NULL, NULL, NULL, print_sector, NULL);
 	}
 
+	statistic_rb_traveling();
+
+	//clean all list entities
 	if(output!=stdout){
 		fclose(output);
 	}
 
-	//print_path_statistic();
-
-	//clean all list entities
 	return 0;
 err:
 	if( ifd < 0 )
@@ -635,8 +634,6 @@ void handle_action(uint32_t act, struct dio_nugget* pdng){
 
 	char actc = GET_ACTION_CHAR(act);
 	pdng->states[pdng->elemidx] = actc;
-	DBGOUT("action %x(%c), sector %"PRIu64", size %d\n", act, actc, pdng->sector, pdng->size);
-	
 
 	switch(act){
 	case 'M':
@@ -738,6 +735,41 @@ void statistic_rb_traveling(){
 	}
 }
 
+//------------------- printing -------------------------------------//
+void print_time() {
+	struct bit_entity* p = NULL;
+
+	list_for_each_entry(p, &biten_head, link) {
+
+		fprintf(output,"%5d.%09lu\t", (int)SECONDS(p->bit.time), (unsigned long)NANO_SECONDS(p->bit.time));
+		fprintf(output,"%llu\t",p->bit.sector);
+		fprintf(output,"%u\t",p->bit.pid);
+		fprintf(output,"%u\n",p->bit.bytes/8);
+	}
+}
+
+void print_sector() {
+
+	struct rb_node *node;
+	node = rb_first(&rben_root);
+	while((node = rb_next(node)) != NULL) {
+		struct list_head* nugget_head;
+		struct dio_rbentity* prbentity;
+
+		prbentity = rb_entry(node, struct dio_rbentity, rblink);
+
+		struct dio_nugget* pdng;
+		uint64_t tmpt = 0;
+
+		list_for_each_entry(pdng, &(prbentity->nghead), nglink) {
+			tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
+			fprintf(output,"%"PRIu64"\t",pdng->sector);
+			fprintf(output,"%5d.%09lu\t",(int)SECONDS(tmpt), (unsigned long)NANO_SECONDS(tmpt));
+			fprintf(output,"%u\t", pdng->pid);
+			fprintf(output,"%d\n", pdng->size);
+		}
+	}
+}
 //------------------- path statistics ------------------------------//
 struct list_head nugget_path_head;
 struct dio_nugget_path* pnugget_path;
@@ -783,46 +815,6 @@ struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, cha
 	return NULL;
 }
 
-void print_time() {
-	struct bit_entity* p = NULL;
-
-	list_for_each_entry(p, &biten_head, link) {
-
-		fprintf(output,"%5d.%09lu ", (int)SECONDS(p->bit.time), (unsigned long)NANO_SECONDS(p->bit.time));
-		fprintf(output,"%llu ",p->bit.sector);
-		fprintf(output,"%u ",p->bit.pid);
-		fprintf(output,"%u\n",p->bit.bytes/8);
-	}
-}
-
-void print_sector() {
-
-	struct rb_node *node;
-
-	node = rb_first(&rben_root);
-
-	while((node = rb_next(node)) != NULL) {
-
-		struct list_head* nugget_head;
-		struct dio_rbentity* prbentity;
-
-		prbentity = rb_entry(node, struct dio_rbentity, rblink);
-
-		struct dio_nugget* pdng;
-		uint64_t tmpt = 0;
-
-		list_for_each_entry(pdng, &(prbentity->nghead), nglink) {
-		
-			
-			tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
-			fprintf(output,"%"PRIu64" \n",pdng->sector);
-			fprintf(output,"%5d.%09lu ",(int)SECONDS(tmpt), (unsigned long)NANO_SECONDS(tmpt));
-			fprintf(output,"%u ", pdng->pid);
-			fprintf(output,"%d\n", pdng->size);
-
-		}
-	}
-}
 
 void init_path_statistic()
 {
@@ -887,7 +879,7 @@ void process_path_statistic(int ng_cnt)
 
 void print_path_statistic(void)
 {
-	printf("%20s %8s %8s %4s %12s %12s %12s \n", " ", "횟수", "읽기횟수", "쓰기횟수", "평균수행시간", "최대수행시간", "최소수행시간");
+	fprintf(output,"%20s %8s %8s %4s %12s %12s %12s \n", " ", "횟수", "읽기횟수", "쓰기횟수", "평균수행시간", "최대수행시간", "최소수행시간");
 	list_for_each_entry(pnugget_path, &nugget_path_head, link)
 	{
 		if(instr(pnugget_path->states, "P") || instr(pnugget_path->states, "U") || instr(pnugget_path->states, "?"))
@@ -895,7 +887,7 @@ void print_path_statistic(void)
 			continue;
 		}
 
-		printf("%20s %4d %8d %8d %2llu:%.9llu %2llu:%.9llu %2llu:%.9llu \n", pnugget_path->states, pnugget_path->count_nugget,
+		fprintf(output,"%20s %4d %8d %8d %2llu:%.9llu %2llu:%.9llu %2llu:%.9llu \n", pnugget_path->states, pnugget_path->count_nugget,
 			pnugget_path->count_read, pnugget_path->count_write,
 			SECONDS(pnugget_path->average_time), NANO_SECONDS(pnugget_path->average_time),
 			SECONDS(pnugget_path->max_time), NANO_SECONDS(pnugget_path->max_time),
@@ -916,66 +908,6 @@ void clear_path_statistic(void)
 		free(pnugget_path);
 	}
 }
-//------------------- section statistics (for example)------------------------------//
-#define MAX_MON_SECTION 10
-static char mon_section[MAX_MON_SECTION][2];
-static uint64_t mon_sec_time[MAX_MON_SECTION];
-static int mon_sec_cnt[MAX_MON_SECTION];
-static int mon_cnt = 0;
-
-void add_monitored_section(char section[2]){
-	if( mon_cnt+1 >= MAX_MON_SECTION )
-		return;
-	
-	memcpy(mon_section[mon_cnt], section, 2);
-	mon_cnt++;
-}
-
-int find_section(char* states, int mon_sec_num){
-	if( mon_sec_num >= mon_cnt )
-		return -1;
-
-	int i=0;
-	for(; i<MAX_ELEMENT_SIZE-1; i++){
-		if( states[i] == 0 )
-			break;
-		if( states[i] == mon_section[mon_sec_num][0] &&
-			states[i+1] == mon_section[mon_sec_num][1] )
-			return i;
-	}
-	return -1;
-}
-			
-void init_section_statistic(){
-	memset(mon_section, 0, sizeof(char)*MAX_MON_SECTION*2);
-	memset(mon_sec_time, 0, sizeof(uint64_t)*MAX_MON_SECTION);
-	memset(mon_sec_cnt, 0, sizeof(mon_sec_cnt));
-	mon_cnt = 0;
-}
-
-void travel_section_statistic(struct dio_nugget* pdng){
-	int i=0, pos=0;
-	for(; i<mon_cnt; i++){
-		pos = find_section(pdng->states, i);
-		if( i == -1 )
-			continue;
-		
-		mon_sec_time[i] += (pdng->times[pos+1] - pdng->times[pos]);
-		mon_sec_cnt[i] ++;
-	}
-}
-
-void process_section_statistic(int ng_cnt){
-	int i=0;
-	for(; i<mon_cnt; i++){
-		//calculate the average spending time for each section
-		mon_sec_time[i] /= mon_sec_cnt[i];
-	}
-}
-
-void clear_section_statistic(){
-}
-
 
 //---------------------------------------- pid statistic -------------------------------------------------//
 //global variables (and data structure) for pid statistic
@@ -1111,5 +1043,68 @@ static void __clear_pid_stat(struct rb_node* p){
 void clear_pid_statistic(){
 	struct rb_node* parent = psd_root.rb_node;
 	__clear_pid_stat(parent);
+}
+
+//------------------- section statistics (for example)------------------------------//
+#define MAX_MON_SECTION 10
+static char mon_section[MAX_MON_SECTION][2];
+static uint64_t mon_sec_time[MAX_MON_SECTION];
+static int mon_sec_cnt[MAX_MON_SECTION];
+static int mon_cnt = 0;
+
+void add_monitored_section(char section[2]){
+	if( mon_cnt+1 >= MAX_MON_SECTION )
+		return;
+	
+	memcpy(mon_section[mon_cnt], section, 2);
+	mon_cnt++;
+}
+
+int find_section(char* states, int mon_sec_num){
+	if( mon_sec_num >= mon_cnt )
+		return -1;
+
+	int i=0;
+	for(; i<MAX_ELEMENT_SIZE-1; i++){
+		if( states[i] == 0 )
+			break;
+		if( states[i] == mon_section[mon_sec_num][0] &&
+			states[i+1] == mon_section[mon_sec_num][1] )
+			return i;
+	}
+	return -1;
+}
+			
+void init_section_statistic(){
+	memset(mon_section, 0, sizeof(char)*MAX_MON_SECTION*2);
+	memset(mon_sec_time, 0, sizeof(uint64_t)*MAX_MON_SECTION);
+	memset(mon_sec_cnt, 0, sizeof(mon_sec_cnt));
+	mon_cnt = 0;
+}
+
+void travel_section_statistic(struct dio_nugget* pdng){
+	int i=0, pos=0;
+	for(; i<mon_cnt; i++){
+		pos = find_section(pdng->states, i);
+		if( i == -1 )
+			continue;
+		
+		mon_sec_time[i] += (pdng->times[pos+1] - pdng->times[pos]);
+		mon_sec_cnt[i] ++;
+	}
+}
+
+void process_section_statistic(int ng_cnt){
+	int i=0;
+	for(; i<mon_cnt; i++){
+		//calculate the average spending time for each section
+		mon_sec_time[i] /= mon_sec_cnt[i];
+	}
+}
+
+void print_section_statistic(){
+}
+
+void clear_section_statistic(){
 }
 
