@@ -142,6 +142,7 @@ typedef void(*statistic_process_func)(int);
 /*--------------	function interfaces	-----------------------*/
 /* function for option handling */
 bool parse_args(int argc, char** argv);
+void check_stat_opt(char *str);
 
 /* function for bit list */
 // insert bit_entity data into rbiten_head order by time
@@ -243,6 +244,10 @@ static uint64_t time_end;
 static uint64_t sector_start;
 static uint64_t sector_end;
 static uint64_t filter_pid;
+static bool is_path;
+static bool is_pid;
+static bool is_cpu;
+
 
 static struct rb_root rben_root;	//root of rbentity tree
 static struct list_head biten_head;
@@ -313,6 +318,9 @@ int main(int argc, char** argv){
 	sector_start = 0;
 	sector_end = (uint64_t)(-1);
 	filter_pid = (uint64_t)(-1);
+	is_path = false;
+	is_cpu = false;
+	is_pid = false;
 
 
 	int ifd = -1;
@@ -466,13 +474,31 @@ bool parse_args(int argc, char** argv){
 		filter_pid = (uint64_t)atoi(optarg);
 		break;
 	case 's':
+		p = strtok(optarg,",");
+		check_stat_opt(p);
+		while(p!=NULL) {
+			p = strtok(NULL,",");
+			check_stat_opt(p);
+		}
 		//path, pid, cpu	
 		break;
         };
     }
     return true;
 }
+void check_stat_opt(char *str) {
+	if(!strcmp(str,"cpu"))
+		is_cpu = true;
+	else if(!strcmp(str,"path"))
+		is_path = true;
+	else if(!strcmp(str,"pid"))
+		is_pid = true;
+	else {
+		printf("-s Option Error\n");
+		exit(1);
+	}
 
+}
 void insert_proper_pos(struct bit_entity* pbiten){
 	struct list_head* p = NULL;
 	struct bit_entity* _pbiten = NULL;
