@@ -4,62 +4,300 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.9~svn20110310	//
-ARG_OPTS	dio-shark.c	167;"	d	file:
-BLKTRACESETUP	dio-shark.h	15;"	d
-BLKTRACESTART	dio-shark.h	16;"	d
-BLKTRACESTOP	dio-shark.h	17;"	d
-BLKTRACETEARDOWN	dio-shark.h	18;"	d
-DIO_SHARK_H	dio-shark.h	2;"	d
-OBJS	Makefile	/^OBJS=dio-shark.o$/;"	m
-SHARK_DONE	dio-shark.h	/^	SHARK_DONE		\/\/shark thread done all of works$/;"	e	enum:shark_stat
-SHARK_READY	dio-shark.h	/^	SHARK_READY = 0,	\/\/shark thread is ready$/;"	e	enum:shark_stat
-SHARK_SICK	dio-shark.h	/^	SHARK_SICK,		\/\/shark thread has problem$/;"	e	enum:shark_stat
-SHARK_WORKING	dio-shark.h	/^	SHARK_WORKING,$/;"	e	enum:shark_stat
-act_mask	dio-shark.h	/^	__u16 act_mask;                 \/* input *\/$/;"	m	struct:user_setup
-arg_opts	dio-shark.c	/^static struct option arg_opts[] = {$/;"	v	typeref:struct:option	file:
-buf_nr	dio-shark.h	/^	__u32 buf_nr;                   \/* input *\/$/;"	m	struct:user_setup
-buf_size	dio-shark.h	/^	__u32 buf_size;                 \/* input *\/$/;"	m	struct:user_setup
-buts_name	dio-shark.h	/^	char *buts_name;$/;"	m	struct:devpath
-cond	dio-shark.h	/^	pthread_cond_t cond;$/;"	m	struct:shark_inven
-cpu	dio-shark.h	/^	int cpu;$/;"	m	struct:tracer
-cpu_info	dio-shark.h	/^struct cpu_info{$/;"	s
-cpuinfo	dio-shark.h	/^	struct cpu_info cpuinfo;$/;"	m	struct:shark_inven	typeref:struct:shark_inven::cpu_info
-debugFilePath	dio-shark.h	/^	char debugFilePath[256];$/;"	m	struct:tracer
-del_sharks	dio-shark.c	/^void del_sharks(void* pdata){$/;"	f
-devpath	dio-shark.h	/^struct devpath {$/;"	s
-dfp	dio-shark.h	/^	int dfp, ofp;$/;"	m	struct:tracer
-dp	dio-shark.c	/^static struct devpath dp;$/;"	v	typeref:struct:devpath	file:
-end_lba	dio-shark.h	/^	__u64 end_lba;$/;"	m	struct:user_setup
-fd	dio-shark.h	/^	int fd, ncpus;$/;"	m	struct:devpath
-list	dio-shark.h	/^	struct dl_head* list;$/;"	m	struct:shark_inven	typeref:struct:shark_inven::dl_head
-main	dio-shark.c	/^int main(int argc, char** argv){$/;"	f
-mt_cond	dio-shark.c	/^static pthread_cond_t mt_cond    = PTHREAD_COND_INITIALIZER;$/;"	v	file:
-mt_mutext	dio-shark.c	/^static pthread_mutex_t mt_mutext = PTHREAD_MUTEX_INITIALIZER;$/;"	v	file:
-name	dio-shark.h	/^	char name[32];$/;"	m	struct:user_setup
-ncpus	dio-shark.h	/^	int fd, ncpus;$/;"	m	struct:devpath
-ofp	dio-shark.h	/^	int dfp, ofp;$/;"	m	struct:tracer
-outputFilePath	dio-shark.h	/^	char outputFilePath[256];$/;"	m	struct:tracer
-parse_args	dio-shark.c	/^bool parse_args(int argc, char** argv){$/;"	f
-path	dio-shark.h	/^	char *path;$/;"	m	struct:devpath
-pfds	dio-shark.h	/^	struct pollfd *pfds;$/;"	m	struct:tracer	typeref:struct:tracer::pollfd
-pid	dio-shark.h	/^	__u32 pid;$/;"	m	struct:user_setup
-set_devpath	dio-shark.c	/^static int set_devpath(char *path){$/;"	f	file:
-setup	dio-shark.c	/^static struct user_setup setup;$/;"	v	typeref:struct:user_setup	file:
-shark_body	dio-shark.c	/^void* shark_body(void* param){$/;"	f
-shark_inven	dio-shark.h	/^struct shark_inven{$/;"	s
-shark_stat	dio-shark.h	/^enum shark_stat{$/;"	g
-sharks	dio-shark.c	/^static struct dl_head* sharks;	\/\/This list's entity data type is struct shark_inven$/;"	v	typeref:struct:dl_head	file:
-sig_handler	dio-shark.c	/^void sig_handler(int sig){$/;"	f
-start_lba	dio-shark.h	/^	__u64 start_lba;$/;"	m	struct:user_setup
-start_tracer	dio-shark.c	/^static void start_tracer(int cpu) {$/;"	f	file:
-stat	dio-shark.h	/^	enum shark_stat stat;$/;"	m	struct:shark_inven	typeref:enum:shark_inven::shark_stat
-stop_shark	dio-shark.c	/^void stop_shark() {$/;"	f
-td	dio-shark.h	/^	pthread_t td;$/;"	m	struct:shark_inven
-thread	dio-shark.h	/^	pthread_t thread;$/;"	m	struct:tracer
-thread_main	dio-shark.c	/^static void *thread_main(void *arg){$/;"	f	file:
-thread_start	dio-shark.c	/^static int thread_start = 0;$/;"	v	file:
-thread_wait	dio-shark.c	/^static int thread_wait = 0;$/;"	v	file:
-tp	dio-shark.c	/^static struct tracer *tp;$/;"	v	typeref:struct:tracer	file:
-tracer	dio-shark.h	/^struct tracer {$/;"	s
-usage_detail	dio-shark.c	/^char usage_detail[] = 	"\\n"\\$/;"	v
-user_setup	dio-shark.h	/^struct user_setup {$/;"	s
+ARG_OPTS	dio_parse.c	149;"	d	file:
+ARG_OPTS	dio_shark.c	206;"	d	file:
+BE_TO_LE16	dio_parse.c	33;"	d	file:
+BE_TO_LE32	dio_parse.c	36;"	d	file:
+BE_TO_LE64	dio_parse.c	40;"	d	file:
+BE_TO_LE_BIT	dio_parse.c	46;"	d	file:
+BLKTRACEAPI_H	blktrace_api.h	2;"	d
+BLKTRACESETUP	blktrace_api.h	132;"	d
+BLKTRACESTART	blktrace_api.h	133;"	d
+BLKTRACESTOP	blktrace_api.h	134;"	d
+BLKTRACETEARDOWN	blktrace_api.h	135;"	d
+BLK_ACTION_STRING	dio_parse.c	29;"	d	file:
+BLK_IO_TRACE_MAGIC	blktrace_api.h	90;"	d
+BLK_IO_TRACE_VERSION	blktrace_api.h	91;"	d
+BLK_TA_ABORT	blktrace_api.h	83;"	d
+BLK_TA_BACKMERGE	blktrace_api.h	69;"	d
+BLK_TA_BOUNCE	blktrace_api.h	81;"	d
+BLK_TA_COMPLETE	blktrace_api.h	75;"	d
+BLK_TA_DRV_DATA	blktrace_api.h	84;"	d
+BLK_TA_FRONTMERGE	blktrace_api.h	70;"	d
+BLK_TA_GETRQ	blktrace_api.h	71;"	d
+BLK_TA_INSERT	blktrace_api.h	79;"	d
+BLK_TA_ISSUE	blktrace_api.h	74;"	d
+BLK_TA_PLUG	blktrace_api.h	76;"	d
+BLK_TA_QUEUE	blktrace_api.h	68;"	d
+BLK_TA_REMAP	blktrace_api.h	82;"	d
+BLK_TA_REQUEUE	blktrace_api.h	73;"	d
+BLK_TA_SLEEPRQ	blktrace_api.h	72;"	d
+BLK_TA_SPLIT	blktrace_api.h	80;"	d
+BLK_TA_UNPLUG_IO	blktrace_api.h	77;"	d
+BLK_TA_UNPLUG_TIMER	blktrace_api.h	78;"	d
+BLK_TC_ACT	blktrace_api.h	31;"	d
+BLK_TC_AHEAD	blktrace_api.h	/^	BLK_TC_AHEAD	= 1 << 11,	\/* readahead *\/$/;"	e	enum:__anon1
+BLK_TC_COMPLETE	blktrace_api.h	/^	BLK_TC_COMPLETE	= 1 << 7,	\/* completions *\/$/;"	e	enum:__anon1
+BLK_TC_DISCARD	blktrace_api.h	/^	BLK_TC_DISCARD	= 1 << 13,	\/* discard requests *\/$/;"	e	enum:__anon1
+BLK_TC_DRV_DATA	blktrace_api.h	/^	BLK_TC_DRV_DATA	= 1 << 14,	\/* binary driver data *\/$/;"	e	enum:__anon1
+BLK_TC_END	blktrace_api.h	/^	BLK_TC_END	= 1 << 15,	\/* we've run out of bits! *\/$/;"	e	enum:__anon1
+BLK_TC_FLUSH	blktrace_api.h	/^	BLK_TC_FLUSH	= 1 << 2,	\/* flush *\/$/;"	e	enum:__anon1
+BLK_TC_FS	blktrace_api.h	/^	BLK_TC_FS	= 1 << 8,	\/* fs requests *\/$/;"	e	enum:__anon1
+BLK_TC_FUA	blktrace_api.h	/^	BLK_TC_FUA	= 1 << 15,	\/* fua requests *\/$/;"	e	enum:__anon1
+BLK_TC_ISSUE	blktrace_api.h	/^	BLK_TC_ISSUE	= 1 << 6,	\/* issue *\/$/;"	e	enum:__anon1
+BLK_TC_META	blktrace_api.h	/^	BLK_TC_META	= 1 << 12,	\/* metadata *\/$/;"	e	enum:__anon1
+BLK_TC_NOTIFY	blktrace_api.h	/^	BLK_TC_NOTIFY	= 1 << 10,	\/* special message *\/$/;"	e	enum:__anon1
+BLK_TC_PC	blktrace_api.h	/^	BLK_TC_PC	= 1 << 9,	\/* pc requests *\/$/;"	e	enum:__anon1
+BLK_TC_QUEUE	blktrace_api.h	/^	BLK_TC_QUEUE	= 1 << 4,	\/* queueing\/merging *\/$/;"	e	enum:__anon1
+BLK_TC_READ	blktrace_api.h	/^	BLK_TC_READ	= 1 << 0,	\/* reads *\/$/;"	e	enum:__anon1
+BLK_TC_REQUEUE	blktrace_api.h	/^	BLK_TC_REQUEUE	= 1 << 5,	\/* requeueing *\/$/;"	e	enum:__anon1
+BLK_TC_SHIFT	blktrace_api.h	30;"	d
+BLK_TC_SYNC	blktrace_api.h	/^	BLK_TC_SYNC	= 1 << 3,	\/* sync *\/$/;"	e	enum:__anon1
+BLK_TC_WRITE	blktrace_api.h	/^	BLK_TC_WRITE	= 1 << 1,	\/* writes *\/$/;"	e	enum:__anon1
+BLK_TN_MESSAGE	blktrace_api.h	88;"	d
+BLK_TN_PROCESS	blktrace_api.h	86;"	d
+BLK_TN_TIMESTAMP	blktrace_api.h	87;"	d
+BUF_NR	dio_shark.c	30;"	d	file:
+BUF_SIZE	dio_shark.c	29;"	d	file:
+BUTS_STAT_NONE	dio_shark.c	35;"	d	file:
+BUTS_STAT_SETUPED	dio_shark.c	36;"	d	file:
+BUTS_STAT_STARTED	dio_shark.c	37;"	d	file:
+BUTS_STAT_STOPPED	dio_shark.c	38;"	d	file:
+CFLAGS	Makefile	/^CFLAGS= -O2$/;"	m
+CFLAGS	Makefile	/^CFLAGS=-D DEBUG -g -O0$/;"	m
+DBGOUT	dio_shark.h	19;"	d
+DBGOUT	dio_shark.h	21;"	d
+DIO_SHARK_H	dio_shark.h	10;"	d
+DOUBLE_TO_NANO_ULL	dio_parse.c	27;"	d	file:
+GET_ACTION_CHAR	dio_parse.c	30;"	d	file:
+HLIST_HEAD	list.h	380;"	d
+HLIST_HEAD_INIT	list.h	379;"	d
+INIT_HLIST_HEAD	list.h	381;"	d
+INIT_HLIST_NODE	list.h	382;"	d
+INIT_LIST_HEAD	list.h	67;"	d
+LIST_HEAD	list.h	64;"	d
+LIST_HEAD_INIT	list.h	62;"	d
+LIST_POISON1	list.h	46;"	d
+LIST_POISON2	list.h	47;"	d
+MAX_ELEMENT_SIZE	dio_parse.c	69;"	d	file:
+MAX_FILEPATH_LEN	dio_parse.c	133;"	d	file:
+MAX_FILE_LENGTH	dio_shark.c	32;"	d	file:
+NANO_SECONDS	dio_parse.c	26;"	d	file:
+NG_BACKMERGE	dio_parse.c	70;"	d	file:
+NG_COMPLETE	dio_parse.c	72;"	d	file:
+NG_FRONTMERGE	dio_parse.c	71;"	d	file:
+PARSE_OBJ	Makefile	/^PARSE_OBJ=dio_parse.o rbtree.o$/;"	m
+PRINT_TYPE_SECTOR	dio_parse.c	135;"	d	file:
+PRINT_TYPE_TIME	dio_parse.c	134;"	d	file:
+RB_BLACK	rbtree.h	103;"	d
+RB_RED	rbtree.h	102;"	d
+RB_ROOT	rbtree.h	140;"	d
+SECONDS	dio_parse.c	25;"	d	file:
+SHARK_OBJ	Makefile	/^SHARK_OBJ=dio_shark.o$/;"	m
+TARGET	Makefile	/^TARGET=dioshark dioparse$/;"	m
+_GNU_SOURCE	dio_shark.c	10;"	d	file:
+_LINUX_LIST_H	list.h	16;"	d
+_LINUX_RBTREE_H	rbtree.h	95;"	d
+__BLK_TA_ABORT	blktrace_api.h	/^	__BLK_TA_ABORT,			\/* request aborted *\/$/;"	e	enum:__anon2
+__BLK_TA_BACKMERGE	blktrace_api.h	/^	__BLK_TA_BACKMERGE,		\/* back merged to existing rq *\/$/;"	e	enum:__anon2
+__BLK_TA_BOUNCE	blktrace_api.h	/^	__BLK_TA_BOUNCE,		\/* bio was bounced *\/$/;"	e	enum:__anon2
+__BLK_TA_COMPLETE	blktrace_api.h	/^	__BLK_TA_COMPLETE,		\/* completed by driver *\/$/;"	e	enum:__anon2
+__BLK_TA_DRV_DATA	blktrace_api.h	/^	__BLK_TA_DRV_DATA,		\/* binary driver data *\/$/;"	e	enum:__anon2
+__BLK_TA_FRONTMERGE	blktrace_api.h	/^	__BLK_TA_FRONTMERGE,		\/* front merge to existing rq *\/$/;"	e	enum:__anon2
+__BLK_TA_GETRQ	blktrace_api.h	/^	__BLK_TA_GETRQ,			\/* allocated new request *\/$/;"	e	enum:__anon2
+__BLK_TA_INSERT	blktrace_api.h	/^	__BLK_TA_INSERT,		\/* insert request *\/$/;"	e	enum:__anon2
+__BLK_TA_ISSUE	blktrace_api.h	/^	__BLK_TA_ISSUE,			\/* sent to driver *\/$/;"	e	enum:__anon2
+__BLK_TA_PLUG	blktrace_api.h	/^	__BLK_TA_PLUG,			\/* queue was plugged *\/$/;"	e	enum:__anon2
+__BLK_TA_QUEUE	blktrace_api.h	/^	__BLK_TA_QUEUE = 1,		\/* queued *\/$/;"	e	enum:__anon2
+__BLK_TA_REMAP	blktrace_api.h	/^	__BLK_TA_REMAP,			\/* bio was remapped *\/$/;"	e	enum:__anon2
+__BLK_TA_REQUEUE	blktrace_api.h	/^	__BLK_TA_REQUEUE,		\/* request requeued *\/$/;"	e	enum:__anon2
+__BLK_TA_SLEEPRQ	blktrace_api.h	/^	__BLK_TA_SLEEPRQ,		\/* sleeping on rq allocation *\/$/;"	e	enum:__anon2
+__BLK_TA_SPLIT	blktrace_api.h	/^	__BLK_TA_SPLIT,			\/* bio was split *\/$/;"	e	enum:__anon2
+__BLK_TA_UNPLUG_IO	blktrace_api.h	/^	__BLK_TA_UNPLUG_IO,		\/* queue was unplugged by io *\/$/;"	e	enum:__anon2
+__BLK_TA_UNPLUG_TIMER	blktrace_api.h	/^	__BLK_TA_UNPLUG_TIMER,		\/* queue was unplugged by timer *\/$/;"	e	enum:__anon2
+__BLK_TN_MESSAGE	blktrace_api.h	/^	__BLK_TN_MESSAGE,               \/* Character string message *\/$/;"	e	enum:blktrace_notify
+__BLK_TN_PROCESS	blktrace_api.h	/^	__BLK_TN_PROCESS = 0,		\/* establish pid\/name mapping *\/$/;"	e	enum:blktrace_notify
+__BLK_TN_TIMESTAMP	blktrace_api.h	/^	__BLK_TN_TIMESTAMP,		\/* include system clock *\/$/;"	e	enum:blktrace_notify
+__hlist_del	list.h	/^static inline void __hlist_del(struct hlist_node *n)$/;"	f
+__list_add	list.h	/^static inline void __list_add(struct list_head *new,$/;"	f
+__list_del	list.h	/^static inline void __list_del(struct list_head * prev, struct list_head * next)$/;"	f
+__list_for_each	list.h	254;"	d
+__list_splice	list.h	/^static inline void __list_splice(struct list_head *list,$/;"	f
+__rb_erase_color	rbtree.c	/^static void __rb_erase_color(struct rb_node *node, struct rb_node *parent,$/;"	f	file:
+__rb_insert_entity	dio_parse.c	/^static struct dio_rbentity* __rb_insert_entity(struct dio_rbentity* prben){$/;"	f	file:
+__rb_rotate_left	rbtree.c	/^static void __rb_rotate_left(struct rb_node *node, struct rb_root *root)$/;"	f	file:
+__rb_rotate_right	rbtree.c	/^static void __rb_rotate_right(struct rb_node *node, struct rb_root *root)$/;"	f	file:
+act_mask	blktrace_api.h	/^	__u16 act_mask;			\/* input *\/$/;"	m	struct:blk_user_trace_setup
+action	blktrace_api.h	/^	__u32 action;		\/* what happened *\/$/;"	m	struct:blk_io_trace
+arg_opts	dio_parse.c	/^static struct option arg_opts[] = {$/;"	v	typeref:struct:option	file:
+arg_opts	dio_shark.c	/^static struct option arg_opts[] = {$/;"	v	typeref:struct:option	file:
+bit	dio_parse.c	/^	struct blk_io_trace bit;$/;"	m	struct:bit_entity	typeref:struct:bit_entity::blk_io_trace	file:
+bit_entity	dio_parse.c	/^struct bit_entity{$/;"	s	file:
+biten_head	dio_parse.c	/^static struct list_head biten_head;$/;"	v	typeref:struct:list_head	file:
+blk_io_trace	blktrace_api.h	/^struct blk_io_trace {$/;"	s
+blk_io_trace_remap	blktrace_api.h	/^struct blk_io_trace_remap {$/;"	s
+blk_user_trace_setup	blktrace_api.h	/^struct blk_user_trace_setup {$/;"	s
+blktrace_notify	blktrace_api.h	/^enum blktrace_notify {$/;"	g
+buf_nr	blktrace_api.h	/^	__u32 buf_nr;			\/* input *\/$/;"	m	struct:blk_user_trace_setup
+buf_size	blktrace_api.h	/^	__u32 buf_size;			\/* input *\/$/;"	m	struct:blk_user_trace_setup
+bytes	blktrace_api.h	/^	__u32 bytes;		\/* transfer length *\/$/;"	m	struct:blk_io_trace
+container_of	list.h	35;"	d
+container_of	rbtree.h	120;"	d
+count_nugget	dio_parse.c	/^	int count_nugget;$/;"	m	struct:dio_nugget_path	file:
+cpu	blktrace_api.h	/^	__u32 cpu;		\/* on what cpu did it happen *\/$/;"	m	struct:blk_io_trace
+create_list_head	dio_shark.c	/^struct list_head* create_list_head(void)$/;"	f
+devName	dio_shark.c	/^static char devName[16];$/;"	v	file:
+devPath	dio_shark.c	/^static char devPath[MAX_FILE_LENGTH];$/;"	v	file:
+device	blktrace_api.h	/^	__u32 device;		\/* device identifier (dev_t) *\/$/;"	m	struct:blk_io_trace
+device_from	blktrace_api.h	/^	__u32 device_from;$/;"	m	struct:blk_io_trace_remap
+device_to	blktrace_api.h	/^	__u32 device_to;$/;"	m	struct:blk_io_trace_remap
+dio_nugget	dio_parse.c	/^struct dio_nugget{$/;"	s	file:
+dio_nugget_path	dio_parse.c	/^struct dio_nugget_path$/;"	s	file:
+dio_rbentity	dio_parse.c	/^struct dio_rbentity{$/;"	s	file:
+elemidx	dio_parse.c	/^	int elemidx;	\/\/element index. (elemidx-1) is count of nugget states$/;"	m	struct:dio_nugget	file:
+end_lba	blktrace_api.h	/^	__u64 end_lba;$/;"	m	struct:blk_user_trace_setup
+error	blktrace_api.h	/^	__u16 error;		\/* completion error *\/$/;"	m	struct:blk_io_trace
+fasten_sharks	dio_shark.c	/^void fasten_sharks(struct list_head* shark_boss)$/;"	f
+find_nugget_path	dio_parse.c	/^struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char* states)$/;"	f
+first	list.h	/^	struct hlist_node *first;$/;"	m	struct:hlist_head	typeref:struct:hlist_head::hlist_node
+g_barrier	dio_shark.c	/^pthread_barrier_t g_barrier;$/;"	v
+g_cond	dio_shark.c	/^pthread_cond_t g_cond	= PTHREAD_COND_INITIALIZER;$/;"	v
+g_isdone	dio_shark.c	/^bool g_isdone = false;$/;"	v
+g_mutex	dio_shark.c	/^pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;$/;"	v
+get_nugget_at	dio_parse.c	/^struct dio_nugget* get_nugget_at(uint64_t sector){$/;"	f
+hlist_add_after	list.h	/^static inline void hlist_add_after(struct hlist_node *n,$/;"	f
+hlist_add_before	list.h	/^static inline void hlist_add_before(struct hlist_node *n,$/;"	f
+hlist_add_head	list.h	/^static inline void hlist_add_head(struct hlist_node *n, struct hlist_head *h)$/;"	f
+hlist_del	list.h	/^static inline void hlist_del(struct hlist_node *n)$/;"	f
+hlist_del_init	list.h	/^static inline void hlist_del_init(struct hlist_node *n)$/;"	f
+hlist_empty	list.h	/^static inline int hlist_empty(const struct hlist_head *h)$/;"	f
+hlist_entry	list.h	454;"	d
+hlist_for_each	list.h	456;"	d
+hlist_for_each_entry	list.h	471;"	d
+hlist_for_each_entry_continue	list.h	483;"	d
+hlist_for_each_entry_from	list.h	495;"	d
+hlist_for_each_entry_safe	list.h	508;"	d
+hlist_for_each_safe	list.h	460;"	d
+hlist_head	list.h	/^struct hlist_head {$/;"	s
+hlist_node	list.h	/^struct hlist_node {$/;"	s
+hlist_unhashed	list.h	/^static inline int hlist_unhashed(const struct hlist_node *h)$/;"	f
+idxCPU	dio_shark.h	/^	int idxCPU;$/;"	m	struct:thread_shark
+init_nugget	dio_parse.c	/^void init_nugget(struct dio_nugget* pdng){$/;"	f
+init_rbentity	dio_parse.c	/^static void init_rbentity(struct dio_rbentity* prben){$/;"	f	file:
+insert_proper_pos	dio_parse.c	/^void insert_proper_pos(struct bit_entity* pbiten){$/;"	f
+interval_time	dio_parse.c	/^	int* interval_time;$/;"	m	struct:dio_nugget_path	file:
+isOpenDebugfs	dio_shark.h	/^	bool isOpenDebugfs;$/;"	m	struct:thread_shark
+isend	dio_parse.c	/^	bool isend;	\/\/if action is 'M' or 'C', than that nugget is ended$/;"	m	struct:dio_nugget	file:
+link	dio_parse.c	/^	struct list_head link;$/;"	m	struct:bit_entity	typeref:struct:bit_entity::list_head	file:
+link	dio_parse.c	/^	struct list_head link;$/;"	m	struct:dio_nugget_path	typeref:struct:dio_nugget_path::list_head	file:
+list	dio_shark.h	/^	struct list_head list;$/;"	m	struct:thread_shark	typeref:struct:thread_shark::list_head
+list_add	list.h	/^static inline void list_add(struct list_head *new, struct list_head *head)$/;"	f
+list_add_tail	list.h	/^static inline void list_add_tail(struct list_head *new, struct list_head *head)$/;"	f
+list_del	list.h	/^static inline void list_del(struct list_head *entry)$/;"	f
+list_del_init	list.h	/^static inline void list_del_init(struct list_head *entry)$/;"	f
+list_empty	list.h	/^static inline int list_empty(const struct list_head *head)$/;"	f
+list_entry	list.h	231;"	d
+list_for_each	list.h	240;"	d
+list_for_each_entry	list.h	282;"	d
+list_for_each_entry_continue	list.h	315;"	d
+list_for_each_entry_reverse	list.h	293;"	d
+list_for_each_entry_safe	list.h	327;"	d
+list_for_each_entry_safe_continue	list.h	341;"	d
+list_for_each_entry_safe_reverse	list.h	355;"	d
+list_for_each_prev	list.h	262;"	d
+list_for_each_safe	list.h	272;"	d
+list_head	list.h	/^struct list_head {$/;"	s
+list_move	list.h	/^static inline void list_move(struct list_head *list, struct list_head *head)$/;"	f
+list_move_tail	list.h	/^static inline void list_move_tail(struct list_head *list,$/;"	f
+list_prepare_entry	list.h	305;"	d
+list_splice	list.h	/^static inline void list_splice(struct list_head *list, struct list_head *head)$/;"	f
+list_splice_init	list.h	/^static inline void list_splice_init(struct list_head *list,$/;"	f
+lock_shark_on_cpu	dio_shark.c	/^bool lock_shark_on_cpu(int idxCPU)$/;"	f
+loose_shark	dio_shark.c	/^struct thread_shark* loose_shark(int idxCPU)$/;"	f
+loose_sharks	dio_shark.c	/^bool loose_sharks(struct list_head* shark_boss, int numCPU){$/;"	f
+magic	blktrace_api.h	/^	__u32 magic;		\/* MAGIC << 8 | version *\/$/;"	m	struct:blk_io_trace
+main	dio_parse.c	/^int main(int argc, char** argv){$/;"	f
+main	dio_shark.c	/^int main(int argc, char** argv){$/;"	f
+main	ioctl_stop.c	/^int main(void)$/;"	f
+mflag	dio_parse.c	/^	int mflag;	\/\/BACKMERGE, FRONTMERGE$/;"	m	struct:dio_nugget	file:
+mlink	dio_parse.c	/^	struct dio_nugget* mlink;	\/\/if it was merged, than mlink points the other nugget as 'mflag'$/;"	m	struct:dio_nugget	typeref:struct:dio_nugget::dio_nugget	file:
+name	blktrace_api.h	/^	char name[32];			\/* output *\/$/;"	m	struct:blk_user_trace_setup
+next	list.h	/^	struct hlist_node *next, **pprev;$/;"	m	struct:hlist_node	typeref:struct:hlist_node::hlist_node
+next	list.h	/^	struct list_head *next, *prev;$/;"	m	struct:list_head	typeref:struct:list_head::list_head
+nghead	dio_parse.c	/^	struct list_head nghead;	\/\/head of nugget list$/;"	m	struct:dio_rbentity	typeref:struct:dio_rbentity::list_head	file:
+nglink	dio_parse.c	/^	struct list_head nglink;	\/\/link of dio_nugget datatype$/;"	m	struct:dio_nugget	typeref:struct:dio_nugget::list_head	file:
+offsetof	list.h	26;"	d
+offsetof	rbtree.h	113;"	d
+offsetof	rbtree.h	115;"	d
+offsetof	rbtree.h	117;"	d
+openfile_debugfs	dio_shark.c	/^int openfile_debugfs(int idxCPU)$/;"	f
+openfile_device	dio_shark.c	/^int openfile_device(char *devpath){$/;"	f
+openfile_device	ioctl_stop.c	/^int openfile_device(char *devpath){$/;"	f
+openfile_output	dio_shark.c	/^int openfile_output(void)$/;"	f
+outPath	dio_shark.c	/^static char outPath[MAX_FILE_LENGTH];$/;"	v	file:
+output	dio_parse.c	/^static FILE *output;$/;"	v	file:
+parse_args	dio_parse.c	/^bool parse_args(int argc, char** argv){$/;"	f
+parse_args	dio_shark.c	/^bool parse_args(int argc, char** argv){$/;"	f
+pdu_len	blktrace_api.h	/^	__u16 pdu_len;		\/* length of data after this trace *\/$/;"	m	struct:blk_io_trace
+pid	blktrace_api.h	/^	__u32 pid;		\/* who did it *\/$/;"	m	struct:blk_io_trace
+pid	blktrace_api.h	/^	__u32 pid;$/;"	m	struct:blk_user_trace_setup
+pprev	list.h	/^	struct hlist_node *next, **pprev;$/;"	m	struct:hlist_node	typeref:struct:hlist_node::
+prev	list.h	/^	struct list_head *next, *prev;$/;"	m	struct:list_head	typeref:struct:list_head::
+print_path_statistic	dio_parse.c	/^void print_path_statistic(void)$/;"	f
+print_sector	dio_parse.c	/^void print_sector() {$/;"	f
+print_time	dio_parse.c	/^void print_time() {$/;"	f
+print_type	dio_parse.c	/^static int print_type;$/;"	v	file:
+put_signalHandler	dio_shark.c	/^void put_signalHandler(void)$/;"	f
+rb_color	rbtree.h	125;"	d
+rb_entry	rbtree.h	141;"	d
+rb_erase	rbtree.c	/^void rb_erase(struct rb_node *node, struct rb_root *root)$/;"	f
+rb_first	rbtree.c	/^struct rb_node *rb_first(struct rb_root *root)$/;"	f
+rb_insert_color	rbtree.c	/^void rb_insert_color(struct rb_node *node, struct rb_root *root)$/;"	f
+rb_insert_entity	dio_parse.c	/^static struct dio_rbentity* rb_insert_entity(struct dio_rbentity* prben){$/;"	f	file:
+rb_is_black	rbtree.h	127;"	d
+rb_is_red	rbtree.h	126;"	d
+rb_last	rbtree.c	/^struct rb_node *rb_last(struct rb_root *root)$/;"	f
+rb_left	rbtree.h	/^	struct rb_node *rb_left;$/;"	m	struct:rb_node	typeref:struct:rb_node::rb_node
+rb_link_node	rbtree.h	/^static inline void rb_link_node(struct rb_node * node, struct rb_node * parent,$/;"	f
+rb_next	rbtree.c	/^struct rb_node *rb_next(struct rb_node *node)$/;"	f
+rb_node	rbtree.h	/^	struct rb_node *rb_node;$/;"	m	struct:rb_root	typeref:struct:rb_root::rb_node
+rb_node	rbtree.h	/^struct rb_node$/;"	s
+rb_parent	rbtree.h	124;"	d
+rb_parent_color	rbtree.h	/^	unsigned long  rb_parent_color;$/;"	m	struct:rb_node
+rb_prev	rbtree.c	/^struct rb_node *rb_prev(struct rb_node *node)$/;"	f
+rb_replace_node	rbtree.c	/^void rb_replace_node(struct rb_node *victim, struct rb_node *new,$/;"	f
+rb_right	rbtree.h	/^	struct rb_node *rb_right;$/;"	m	struct:rb_node	typeref:struct:rb_node::rb_node
+rb_root	rbtree.h	/^struct rb_root$/;"	s
+rb_search_entity	dio_parse.c	/^static struct dio_rbentity* rb_search_entity(uint64_t sector){$/;"	f	file:
+rb_set_black	rbtree.h	129;"	d
+rb_set_color	rbtree.h	/^static inline void rb_set_color(struct rb_node *rb, int color)$/;"	f
+rb_set_parent	rbtree.h	/^static inline void rb_set_parent(struct rb_node *rb, struct rb_node *p)$/;"	f
+rb_set_red	rbtree.h	128;"	d
+rben_root	dio_parse.c	/^static struct rb_root rben_root;	\/\/root of rbentity tree$/;"	v	typeref:struct:rb_root	file:
+rblink	dio_parse.c	/^	struct rb_node rblink;		\/\/red black tree link$/;"	m	struct:dio_rbentity	typeref:struct:dio_rbentity::rb_node	file:
+respath	dio_parse.c	/^static char respath[MAX_FILEPATH_LEN];	\/\/result file path$/;"	v	file:
+sector	blktrace_api.h	/^	__u64 sector;		\/* disk offset *\/$/;"	m	struct:blk_io_trace
+sector	dio_parse.c	/^	uint64_t sector;	\/\/sector number of bit who was requested. is it really need?$/;"	m	struct:dio_nugget	file:
+sector	dio_parse.c	/^	uint64_t sector;$/;"	m	struct:dio_rbentity	file:
+sector_end	dio_parse.c	/^static __u64 sector_end;$/;"	v	file:
+sector_from	blktrace_api.h	/^	__u64 sector_from;$/;"	m	struct:blk_io_trace_remap
+sector_start	dio_parse.c	/^static __u64 sector_start;$/;"	v	file:
+sequence	blktrace_api.h	/^	__u32 sequence;		\/* event number *\/$/;"	m	struct:blk_io_trace
+set_signalHandler	dio_shark.c	/^void set_signalHandler(void)$/;"	f
+setup_buts	dio_shark.c	/^void setup_buts(struct blk_user_trace_setup *pbuts)$/;"	f
+shark_body	dio_shark.c	/^void* shark_body(void* param){$/;"	f
+signalHandler	dio_shark.c	/^void signalHandler(int idxSignal)$/;"	f
+start_lba	blktrace_api.h	/^	__u64 start_lba;$/;"	m	struct:blk_user_trace_setup
+states	dio_parse.c	/^	char states[MAX_ELEMENT_SIZE];	\/\/action$/;"	m	struct:dio_nugget	file:
+states	dio_parse.c	/^	char states[MAX_ELEMENT_SIZE];$/;"	m	struct:dio_nugget_path	file:
+td	dio_shark.h	/^	pthread_t td;$/;"	m	struct:thread_shark
+thread_shark	dio_shark.h	/^struct thread_shark{$/;"	s
+time	blktrace_api.h	/^	__u64 time;		\/* in nanoseconds *\/$/;"	m	struct:blk_io_trace
+time_end	dio_parse.c	/^static __u64 time_end;$/;"	v	file:
+time_start	dio_parse.c	/^static __u64 time_start;		\/* in nanoseconds *\/$/;"	v	file:
+times	dio_parse.c	/^	uint64_t times[MAX_ELEMENT_SIZE];	\/\/states[elemidx] is occured at times[elemidx]$/;"	m	struct:dio_nugget	file:
+total_time	dio_parse.c	/^	int total_time;$/;"	m	struct:dio_nugget_path	file:
+type	dio_parse.c	/^	char type[5];	\/\/type of bit who was requested$/;"	m	struct:dio_nugget	file:
+usage_detail	dio_shark.c	/^char usage_detail[] = 	"\\n"\\$/;"	v
+wait_comeback_shark	dio_shark.c	/^void* wait_comeback_shark(struct list_head* shark_boss)$/;"	f
+wait_open_debugfs	dio_shark.c	/^void wait_open_debugfs(void)$/;"	f
