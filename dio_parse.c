@@ -599,6 +599,10 @@ void statistic_rb_traveling(){
 		stat_clr_fns[i]();
 }
 
+//------------------- path statistics ------------------------------//
+struct list_head nugget_path_head;
+struct dio_nugget_path* pnugget_path;
+
 int instr(const char* str1, const char* str2)
 {
         int i, j;
@@ -625,7 +629,6 @@ int instr(const char* str1, const char* str2)
         return 0;
 }
 
-
 struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states)
 {
 	struct dio_nugget_path* pdngpath;
@@ -641,69 +644,76 @@ struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, cha
 	return NULL;
 }
 
+void init_path_statistic()
+{
+	INIT_LIST_HEAD(&nugget_path_head);
+}
+
+void travel_path_statistic(struct dio_nugget* pdng)
+{
+	char* 		pstates;
+	uint64_t*	ptimes;
+	int*		pelemidx;
+	int			i;
+	int			nugget_time;
+
+	pnugget_path = find_nugget_path(&nugget_path_head, pdng->states);
+	if(pnugget_path == NULL)	// if not exist
+	{
+		pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
+
+		// Init pnugget_path's members
+		memset(pnugget_path, 0, sizeof(struct dio_nugget_path));
+		pnugget_path->min_time = -1;
+		strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
+
+		// Add list
+		list_add(&(pnugget_path->link), &nugget_path_head);
+	}
+
+	// Add read/write count to distribute those.
+	if(pdng->category & BLK_TC_READ)
+	{
+		pnugget_path->count_read++;
+	}
+	if(pdng->category & BLK_TC_WRITE)
+	{
+		pnugget_path->count_write++;
+	}
+
+	// Set data on pnugget_path.
+	pnugget_path->count_nugget++;
+	nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
+	pnugget_path->total_time += nugget_time;
+	if(pnugget_path->max_time < nugget_time)
+	{
+		pnugget_path->max_time = nugget_time;
+	}
+	if(pnugget_path->min_time > nugget_time)
+	{
+		pnugget_path->min_time = nugget_time;
+	}
+}
+
+
+void process_path_statistic(int ng_cnt)
+{
+	// Calculate average time.
+	list_for_each_entry(pnugget_path, &nugget_path_head, link)
+	{
+		pnugget_path->average_time = pnugget_path->total_time / pnugget_path->count_nugget;
+	}
+}
+
 void print_path_statistic(void)
 {
-	struct rb_node* node;
-	struct list_head nugget_path_head;
-	struct dio_nugget_path* pnugget_path;
-
-	INIT_LIST_HEAD(&nugget_path_head);
-
-	node = rb_first(&rben_root);
-	do
-	{
-		struct dio_rbentity* prbentity;
-
-		prbentity = rb_entry(node, struct dio_rbentity, rblink);
-
-		struct dio_nugget* pdng;
-
-		list_for_each_entry(pdng, &prbentity->nghead, nglink)
-		{
-			char* pstates;
-			uint64_t* ptimes;
-			int* pelemidx;
-			int i;
-			int nugget_time;
-
-			pnugget_path = find_nugget_path(&nugget_path_head, pdng->states);
-			if(pnugget_path == NULL)
-			{
-				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
-				memset(pnugget_path, 0, sizeof(struct dio_nugget_path));
-				pnugget_path->min_time = -1;
-				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
-
-				list_add(&(pnugget_path->link), &nugget_path_head);
-//				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
-			}
-			if(pdng->category & BLK_TC_READ)
-			{
-				pnugget_path->count_read++;
-			}
-			if(pdng->category & BLK_TC_WRITE)
-			{
-				pnugget_path->count_write++;
-			}
-
-			pnugget_path->count_nugget++;
-			nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
-			pnugget_path->total_time += nugget_time;
-			if(pnugget_path->max_time < nugget_time)
-			{
-				pnugget_path->max_time = nugget_time;
-			}
-			if(pnugget_path->min_time > nugget_time)
-			{
-				pnugget_path->min_time = nugget_time;
-			}
-		}
-		pnugget_path->average_time = pnugget_path->total_time / pnugget_path->count_nugget;
-	}while((node = rb_next(node)) != NULL);
-
 	printf("%20s %8s %8s %4s %12s %12s %12s \n", " ", "횟수", "읽기횟수", "쓰기횟수", "평균수행시간", "최대수행시간", "최소수행시간");
 	list_for_each_entry(pnugget_path, &nugget_path_head, link)
 	{
+		if(instr(pnugget_path->states, "P") || instr(pnugget_path->states, "U") || instr(pnugget_path->states, "?"))
+		{
+			continue;
+		}
 
 		printf("%20s %4d %8d %8d %2llu:%.9llu %2llu:%.9llu %2llu:%.9llu \n", pnugget_path->states, pnugget_path->count_nugget,
 			pnugget_path->count_read, pnugget_path->count_write,
@@ -711,9 +721,21 @@ void print_path_statistic(void)
 			SECONDS(pnugget_path->max_time), NANO_SECONDS(pnugget_path->max_time),
 			SECONDS(pnugget_path->min_time), NANO_SECONDS(pnugget_path->min_time)
 		);
-	} 
+
+	}
 }
 
+void clear_path_statistic(void)
+{
+	struct dio_nugget_path* tmpdng_path;
+
+	// Free all dynamic allocated variables.
+	list_for_each_entry_safe(pnugget_path, tmpdng_path, &nugget_path_head, link)
+	{
+		list_del(&pnugget_path->link);
+		free(pnugget_path);
+	}
+}
 //------------------- section statistics (for example)------------------------------//
 #define MAX_MON_SECTION 10
 static char mon_section[MAX_MON_SECTION][2];
