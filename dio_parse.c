@@ -170,6 +170,10 @@ static void add_statistic_function(statistic_init_func stat_init_fn,
 
 // traveling the rb tree with execution the added statistic functions
 static void statistic_rb_traveling();
+
+// statistic for each list entity
+static void statistic_list_for_each();
+
 void print_path_statistic(void);
 struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states);
 
@@ -906,3 +910,4 @@ void clear_pid_statistic(){
 	struct rb_node* parent = psd_root.rb_node;
 	__clear_pid_stat(parent);
 }
+
