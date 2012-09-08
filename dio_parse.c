@@ -194,6 +194,7 @@ static uint64_t time_start;		/* in nanoseconds */
 static uint64_t time_end;
 static uint64_t sector_start;
 static uint64_t sector_end;
+static uint64_t filter_pid;
 
 static struct rb_root rben_root;	//root of rbentity tree
 static struct list_head biten_head;
@@ -205,7 +206,7 @@ static statistic_print_func stat_prt_fns[MAX_STATISTIC_FUNCTION];
 static statistic_clear_func stat_clr_fns[MAX_STATISTIC_FUNCTION];
 static int stat_fn_cnt = 0;
 
-#define ARG_OPTS "i:o:p:t:s"
+#define ARG_OPTS "i:o:p:T:S:P:s"
 static struct option arg_opts[] = {
 	{	
 		.name = "resfile",
@@ -229,10 +230,22 @@ static struct option arg_opts[] = {
 		.name = "time",
 		.has_arg = required_argument,
 		.flag = NULL,
-		.val = 't'
+		.val = 'T'
 	},
 	{
 		.name = "sector",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'S'
+	},
+	{
+		.name = "pid",
+		.has_arg = required_argument,
+		.flag = NULL,
+		.val = 'P'
+	},
+	{
+		.name = "statistic",
 		.has_arg = required_argument,
 		.flag = NULL,
 		.val = 's'
@@ -246,9 +259,10 @@ int main(int argc, char** argv){
 
 	print_type = PRINT_TYPE_TIME;
 	time_start = 0;
-	time_end = 0;
+	time_end = (uint64_t)(-1);
 	sector_start = 0;
-	sector_end = 0;
+	sector_end = (uint64_t)(-1);
+	filter_pid = (uint64_t)(-1);
 
 
 	int ifd = -1;
@@ -297,6 +311,13 @@ int main(int argc, char** argv){
 			lseek(ifd, pbiten->bit.pdu_len, SEEK_CUR);
 		}
 		
+		//filter
+		if( (time_start > pbiten->bit.time || time_end < pbiten->bit.time) ||
+			(sector_start > pdng->sector || sector_end < pdng->sector) )
+			continue;
+		if( filter_pid ==(uint64_t)(-1) || filter_pid != pbiten->bit.pid )
+			continue;
+
 		if( (pbiten->bit.action >> BLK_TC_SHIFT) == BLK_TC_NOTIFY )
 			continue;
 			
@@ -353,47 +374,52 @@ err:
 }
 
 bool parse_args(int argc, char** argv){
-    char tok;
+	char tok;
 	char *p;
-    while( (tok = getopt_long(argc, argv, ARG_OPTS, arg_opts, NULL)) >= 0){
-        switch(tok){
-			case 'i':
-				memset(respath,0,sizeof(char)*MAX_FILEPATH_LEN);
-				strcpy(respath,optarg);
-				break;
-            case 'p':
-				if(!strcmp("sector",optarg)) {
-					print_type = PRINT_TYPE_SECTOR;
-				} else if(!strcmp("time",optarg)) {
-					print_type = PRINT_TYPE_TIME;
-				} else {
-					printf("Print Type Error\n");
-					exit(1);
-				}
+	
+	while( (tok = getopt_long(argc, argv, ARG_OPTS, arg_opts, NULL)) >= 0){
+	switch(tok){
+	case 'i':
+		memset(respath,0,sizeof(char)*MAX_FILEPATH_LEN);
+		strcpy(respath,optarg);
+		break;
+	case 'p':
+		if(!strcmp("sector",optarg)) {
+			print_type = PRINT_TYPE_SECTOR;
+		} else if(!strcmp("time",optarg)) {
+			print_type = PRINT_TYPE_TIME;
+		} else {
+			printf("Print Type Error\n");
+			exit(1);
+		}
                 break;
-            case 'o':
-				output = fopen(optarg,"w");
-				if(output==NULL) {
-					printf("Output File Open Error\n");
-					exit(1);
-				}
+	case 'o':
+		output = fopen(optarg,"w");
+		if(output==NULL) {
+			printf("Output File Open Error\n");
+			exit(1);
+		}
                 break;
-			case 't':
-				p = strtok(optarg,",");
-				time_start = (uint64_t)atoi(p) * 1000000000;
-				p = strtok(NULL,",");
-				time_end = (uint64_t)atoi(p) * 1000000000;
-				break;
-			case 's':
-				p = strtok(optarg,",");
-				sector_start = (uint64_t)atoll(p);
-				p = strtok(NULL,",");
-				sector_end = (uint64_t)atoll(p);
-				break;
+	case 'T':
+		p = strtok(optarg,",");
+		time_start = (uint64_t)atoi(p) * 1000000000;
+		p = strtok(NULL,",");
+		time_end = (uint64_t)atoi(p) * 1000000000;
+		break;
+	case 'S':
+		p = strtok(optarg,",");
+		sector_start = (uint64_t)atoll(p);
+		p = strtok(NULL,",");
+		sector_end = (uint64_t)atoll(p);
+		break;
+	case 'P':
+		filter_pid = (uint64_t)atoi(optarg);
+		break;
+	case 's':
+		//path, pid, cpu	
+		break;
         };
     }
-
-
     return true;
 }
 
@@ -761,9 +787,6 @@ void print_time() {
 	struct bit_entity* p = NULL;
 
 	list_for_each_entry(p, &biten_head, link) {
-		if(p->bit.sequence == 0) continue;
-		if( (time_start == 0 && time_end ==0) || 
-			(time_start > p->bit.time || time_end < p->bit.time)) continue;
 
 		fprintf(output,"%5d.%09lu ", (int)SECONDS(p->bit.time), (unsigned long)NANO_SECONDS(p->bit.time));
 		fprintf(output,"%llu ",p->bit.sector);
@@ -790,8 +813,6 @@ void print_sector() {
 
 		list_for_each_entry(pdng, &(prbentity->nghead), nglink) {
 		
-			if( (sector_start == 0 && sector_end ==0) || 
-				(sector_start > pdng->sector || sector_end < pdng->sector)) continue;
 			
 			tmpt = pdng->times[pdng->elemidx-1] - pdng->times[0];
 			fprintf(output,"%"PRIu64" \n",pdng->sector);
