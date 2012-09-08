@@ -254,7 +254,10 @@ static statistic_travel_func stat_trv_fns[MAX_STATISTIC_FUNCTION];
 static statistic_process_func stat_proc_fns[MAX_STATISTIC_FUNCTION];
 static statistic_print_func stat_prt_fns[MAX_STATISTIC_FUNCTION];
 static statistic_clear_func stat_clr_fns[MAX_STATISTIC_FUNCTION];
-static int stat_fn_cnt = 0;
+static int stat_fn_cnt = 0;		//statistic callback functions iterated on tree
+static int stat_fn_list_cnt = 0;	//statistic callback functions iterated on list.
+					//callback function for list is filled from the 
+					//last index of callback table
 
 #define ARG_OPTS "i:o:p:T:S:P:s"
 static struct option arg_opts[] = {
@@ -1093,6 +1096,7 @@ void process_pid_statistic(int ng_cnt){
 }
 
 void print_pid_statistic(){
+	fprintf(output,"%10s %6s %6s %12s %12s %12s \n", "pid", "Type", "No", "AverageTime", "MaxTime", "MinTime");
 	struct rb_node* node = NULL;
 	node = rb_first(&psd_root);
 	do{
@@ -1100,6 +1104,20 @@ void print_pid_statistic(){
 		ppsd = rb_entry(node, struct pid_stat_data, link);
 
 		//print data
+		fprintf(output, "%10"PRIu32" %6s %6d %2llu:%.10llu %2llu:%.10llu %2llu:%.10llu \n", 
+			ppsd->pid, "Read", ppsd->data_time_read.count, 
+			SECONDS(ppsd->data_time_read.average_time), NANO_SECONDS(ppsd->data_time_read.average_time),
+			SECONDS(ppsd->data_time_read.max_time), NANO_SECONDS(ppsd->data_time_read.max_time),
+			SECONDS(ppsd->data_time_read.min_time), NANO_SECONDS(ppsd->data_time_read.min_time)
+		);
+
+		fprintf(output, "%10s %6s %6d %2llu:%.10llu %2llu:%.10llu %2llu:%.10llu \n", 
+			" ", "Write", ppsd->data_time_write.count,
+			SECONDS(ppsd->data_time_write.average_time), NANO_SECONDS(ppsd->data_time_write.average_time),
+			SECONDS(ppsd->data_time_write.max_time), NANO_SECONDS(ppsd->data_time_write.max_time),
+			SECONDS(ppsd->data_time_write.min_time), NANO_SECONDS(ppsd->data_time_write.min_time)
+		);
+		fprintf(output, "\n");
 	}while( (node = rb_next(node)) != NULL );
 }
 
