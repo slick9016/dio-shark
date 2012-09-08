@@ -27,9 +27,8 @@
 #define NANO_SECONDS(x)         ((unsigned long long)(x) % 1000000000)
 #define DOUBLE_TO_NANO_ULL(d)   ((unsigned long long)((d) * 1000000000))
 
-#define BLK_ACTION_STRING	"QMFGSRDCPUTIXBAad"
+#define BLK_ACTION_STRING		"QMFGSRDCPUTIXBAad"
 #define GET_ACTION_CHAR(x)      (0<(x&0xffff) && (x&0xffff)<sizeof(BLK_ACTION_STRING))?BLK_ACTION_STRING[(x & 0xffff) - 1]:'?'
-
 
 #define BE_TO_LE16(word) \
 	(((word)>>8 & 0x00FF) | ((word)<<8 & 0xFF00))
@@ -77,6 +76,7 @@ struct dio_nugget{
 
 	//real nugget data
 	int elemidx;	//element index. (elemidx-1) is count of nugget states
+	int category;
 	char states[MAX_ELEMENT_SIZE];	//action
 	uint64_t times[MAX_ELEMENT_SIZE];	//states[elemidx] is occured at times[elemidx]
 	char type[5];	//type of bit who was requested
@@ -100,7 +100,12 @@ struct dio_nugget_path
 
 	char states[MAX_ELEMENT_SIZE];
 	int count_nugget;
-	int total_time;
+	int count_read;
+	int count_write;
+	unsigned int total_time;
+	unsigned int average_time;
+	unsigned int max_time;
+	unsigned int min_time;
 	int* interval_time;
 };
 
@@ -155,6 +160,9 @@ static void add_statistic_function(statistic_init_func stat_init_fn,
 
 // traveling the rb tree with execution the added statistic functions
 static void statistic_rb_traveling();
+void print_path_statistic(void);
+struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states);
+
 /*--------------	global variables	-----------------------*/
 #define MAX_FILEPATH_LEN 255
 static char respath[MAX_FILEPATH_LEN];	//result file path
@@ -257,6 +265,8 @@ int main(int argc, char** argv){
 		}
 		extract_nugget(&p->bit, pdng);
 	}
+
+	print_path_statistic();
 
 	//clean all list entities
 	return 0;
@@ -467,6 +477,7 @@ void extract_nugget(struct blk_io_trace* pbit, struct dio_nugget* pdngbuf){
 		pdngbuf->size = pbit->bytes;
 
 	handle_action(pbit->action, pdngbuf);
+	pdngbuf->category = pbit->action >> BLK_TC_SHIFT;
 	pdngbuf->elemidx++;
 }
 
@@ -557,11 +568,38 @@ void statistic_rb_traveling(){
 		stat_clr_fns[i](cnt);
 }
 
-struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char* states)
+int instr(const char* str1, const char* str2)
+{
+        int i, j;
+
+        i=0;
+        while(str1[i] != '\0')
+        {
+                j=0;
+                while(str2[j] != '\0')
+                {
+                        if(str1[i+j] != str2[j])
+                        {
+                                break;
+                        }
+                        j++;
+                }
+                if(str2[j] == '\0')
+                {
+                        return i+1;
+                }
+                i++;
+        }
+
+        return 0;
+}
+
+
+struct dio_nugget_path* find_nugget_path(struct list_head* nugget_path_head, char* states)
 {
 	struct dio_nugget_path* pdngpath;
 
-	list_for_each_entry(pdngpath, &nugget_path_head, link)
+	list_for_each_entry(pdngpath, nugget_path_head, link)
 	{
 		if(strcmp(pdngpath->states, states) == 0)
 		{
@@ -575,49 +613,74 @@ struct dio_nugget_path* find_nugget_path(struct list_head nugget_path_head, char
 void print_path_statistic(void)
 {
 	struct rb_node* node;
+	struct list_head nugget_path_head;
+	struct dio_nugget_path* pnugget_path;
+
+	INIT_LIST_HEAD(&nugget_path_head);
 
 	node = rb_first(&rben_root);
-	while((node = rb_next(node)) != NULL)
+	do
 	{
-		struct list_head* nugget_head;
 		struct dio_rbentity* prbentity;
 
 		prbentity = rb_entry(node, struct dio_rbentity, rblink);
 
 		struct dio_nugget* pdng;
-		list_for_each_entry(pdng, nugget_head, nglink)
+
+		list_for_each_entry(pdng, &prbentity->nghead, nglink)
 		{
-			struct list_head nugget_path_head;
-			struct dio_nugget_path* pnugget_path;
 			char* pstates;
 			uint64_t* ptimes;
 			int* pelemidx;
 			int i;
+			int nugget_time;
 
-			INIT_LIST_HEAD(&nugget_path_head);
-
-			pnugget_path = find_nugget_path(nugget_path_head, pstates);
+			pnugget_path = find_nugget_path(&nugget_path_head, pdng->states);
 			if(pnugget_path == NULL)
 			{
 				pnugget_path = (struct dio_nugget_path*)malloc(sizeof(struct dio_nugget_path));
-
+				memset(pnugget_path, 0, sizeof(struct dio_nugget_path));
+				pnugget_path->min_time = -1;
 				strncpy(pnugget_path->states, pdng->states, MAX_ELEMENT_SIZE);
-				list_add(&(pnugget_path->link), &nugget_path_head);
 
-				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
+				list_add(&(pnugget_path->link), &nugget_path_head);
+//				pnugget_path->interval_time = (int*)malloc(sizeof(int) * (pdng->elemidx-1));
+			}
+			if(pdng->category & BLK_TC_READ)
+			{
+				pnugget_path->count_read++;
+			}
+			if(pdng->category & BLK_TC_WRITE)
+			{
+				pnugget_path->count_write++;
 			}
 
 			pnugget_path->count_nugget++;
-			for(i=0 ; i<pdng->elemidx ; i++)
+			nugget_time = pdng->times[pdng->elemidx] - pdng->times[0];
+			pnugget_path->total_time += nugget_time;
+			if(pnugget_path->max_time < nugget_time)
 			{
-				if(i < pdng->elemidx-1)
-				{
-					pnugget_path->interval_time[i] = pdng->times[i+1] - pdng->times[i];
-				}
-				pnugget_path->total_time += pdng->times[i];
+				pnugget_path->max_time = nugget_time;
+			}
+			if(pnugget_path->min_time > nugget_time)
+			{
+				pnugget_path->min_time = nugget_time;
 			}
 		}
-	}
+		pnugget_path->average_time = pnugget_path->total_time / pnugget_path->count_nugget;
+	}while((node = rb_next(node)) != NULL);
+
+	printf("%20s %8s %8s %4s %12s %12s %12s \n", " ", "횟수", "읽기횟수", "쓰기횟수", "평균수행시간", "최대수행시간", "최소수행시간");
+	list_for_each_entry(pnugget_path, &nugget_path_head, link)
+	{
+
+		printf("%20s %4d %8d %8d %2llu:%.9llu %2llu:%.9llu %2llu:%.9llu \n", pnugget_path->states, pnugget_path->count_nugget,
+			pnugget_path->count_read, pnugget_path->count_write,
+			SECONDS(pnugget_path->average_time), NANO_SECONDS(pnugget_path->average_time),
+			SECONDS(pnugget_path->max_time), NANO_SECONDS(pnugget_path->max_time),
+			SECONDS(pnugget_path->min_time), NANO_SECONDS(pnugget_path->min_time)
+		);
+	} 
 }
 
 //----------------------------------- section statistics ------------------------------//

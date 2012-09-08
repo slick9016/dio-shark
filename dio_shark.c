@@ -409,6 +409,17 @@ void* shark_body(void* param){
 		}
 	}
 
+	//Write remain
+	memset(buf, 0, sizeof(buf));
+	lenread = read(fdpoll.fd, buf, sizeof(buf));
+	if(lenread < 0)
+	{
+		fprintf(stderr, "openfile_output() failed:%d/%s\n", errno, strerror(errno));
+		goto out;
+	}
+
+	write(fdOutput, buf, lenread);
+
 out:
 	// close output file
 	if(!(fdOutput < 0))
