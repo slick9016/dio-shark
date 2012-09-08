@@ -782,9 +782,9 @@ void print_sector() {
 		list_for_each_entry(pdng, &(prbentity->nghead), nglink) {
 		
 			if( (sector_start == 0 && sector_end ==0) || 
-				(sector_start > p->bit.time || sector_end < p->bit.time)) continue;
+				(sector_start > pdng->sector || sector_end < pdng->sector)) continue;
 			
-			fprintf(output,"%llu \n",pdng->sector);
+			fprintf(output,"%"PRIu64" \n",pdng->sector);
 
 		}
 		
